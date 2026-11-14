@@ -40,7 +40,7 @@ Local only; progress in your browser's storage plus Save/Load to a file; no comp
 Agentboard's: the same tokens, light and dark, cards, rings, calm motion (reduced-motion respected). System fonts, so it works offline.
 
 ## Built so far
-Open `index.html`. Tracks 1 and 2 are complete (11 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 3 to 9 are outlined on the Map and greyed. Checks live in `tests/run.js`.
+Open `index.html`. Tracks 1, 2 and 3 are complete (16 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 4 to 9 are outlined on the Map and greyed. Checks live in `tests/run.js`.
 
 ## Decisions taken while building (simplest option each time)
 1. The Map stays the home screen; the roles tree is a second map behind a switch at the top.

@@ -60,8 +60,8 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
     return out;
   });
   eq(shape.bad, [], 'all lessons, roles and questions are well formed');
-  eq(shape.lessons.length, 11, 'eleven lessons');
-  eq(shape.tracks.slice(0, 3), [5, 6, 0], 'track 1 has five lessons, track 2 has six, track 3 none yet');
+  eq(shape.lessons.length, 16, 'sixteen lessons');
+  eq(shape.tracks.slice(0, 4), [5, 6, 5, 0], 'track 1 has five lessons, track 2 has six, track 3 has five, track 4 none yet');
   ok(!shape.dupe, 'question ids are unique');
   const md = fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
   const srcIds = await D(page, () => ACADEMY.sources.map(s => s.id));
@@ -173,6 +173,64 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
   ok(/4 of 4/.test(await text(page, '#it-count')), 'iterate: three targeted changes pass all four');
   await page.check('#widget [data-fix="creative"]');
   ok(/2 of 4/.test(await text(page, '#it-count')) && /regression/i.test(await text(page, '#it-log')), 'iterate: "be creative" breaks two cases and the log calls it a regression');
+
+  section('Track 3 pictures');
+  await goLesson(page, 'agents', 'tooluse');
+  ok(/tool request/.test(await text(page, '#tu-trace')) && /7,006,652/.test(await text(page, '#tu-trace')) && (await page.locator('#tu-verdict').getAttribute('class')).includes('ok'), 'tool use: with the calculator on, the model asks, the app runs the sum, and the answer is right');
+  eq(await D(page, () => [WIDGETS._calc('1234 * 5678'), WIDGETS._calc('2 + 2'), WIDGETS._calc('alert(1)')]), ['7006652', '4', 'error'], 'tool use: the calculator really calculates, and runs nothing else');
+  await page.uncheck('#widget [data-tool="calc"]');
+  ok(/7,006,552/.test(await text(page, '#tu-trace')) && !/tool request/.test(await text(page, '#tu-trace')) && (await page.locator('#tu-verdict').getAttribute('class')).includes('bad'), 'tool use: without it, the model answers from memory, close and wrong');
+  await page.click('#widget [data-q="1"]');
+  ok(/In review/.test(await text(page, '#tu-trace')), 'tool use: the ticket lookup returns the real status');
+  await page.uncheck('#widget [data-tool="ticket"]');
+  ok(/In progress/.test(await text(page, '#tu-trace')) && /Invented/.test(await text(page, '#tu-verdict')), 'tool use: without the lookup, the status is invented');
+  await page.check('#widget [data-tool="ticket"]'); await page.check('#widget [data-tool="calc"]'); await page.click('#widget [data-q="2"]');
+  ok(!/tool request/.test(await text(page, '#tu-trace')) && /No tool was needed/.test(await text(page, '#tu-verdict')), 'tool use: a haiku needs no tool, so none is called');
+
+  await goLesson(page, 'agents', 'loop');
+  await page.click('#widget [data-a="step"]'); await page.click('#widget [data-a="step"]');
+  eq(await page.locator('#lp-trace li').count(), 2, 'agent loop: each press adds one think, act, observe step');
+  const w2 = await D(page, () => +/about (\d+) of/.exec(document.querySelector('#lp-used').textContent)[1]);
+  await page.click('#widget [data-a="run"]');
+  ok(await page.locator('#lp-trace li').count() === 7 && /All 12 tests passed/.test(await text(page, '#lp-trace')) && (await page.locator('#lp-verdict').getAttribute('class')).includes('ok'), 'agent loop: run to the end finishes in seven steps with the tests passing');
+  ok(await D(page, () => +/about (\d+) of/.exec(document.querySelector('#lp-used').textContent)[1]) > w2, 'agent loop: the window grows with every step');
+  await page.click('#widget [data-a="reset"]'); await setRange(page, '#lp-max', 4); await page.click('#widget [data-a="run"]');
+  ok(await page.locator('#lp-trace li').count() === 4 && /half-done/.test(await text(page, '#lp-verdict')) && await page.locator('#widget [data-a="step"]').isDisabled(), 'agent loop: a step limit of four stops it with a half-done change');
+  await page.click('#widget [data-a="reset"]'); await setRange(page, '#lp-max', 2); await page.click('#widget [data-a="run"]');
+  ok(/Nothing has been changed yet/.test(await text(page, '#lp-verdict')), 'agent loop: stopped before any edit, nothing is left half done');
+
+  await goLesson(page, 'agents', 'planning');
+  ok((await page.locator('#pl-order').getAttribute('class')).includes('bad') && (await page.locator('#pl-gate').getAttribute('class')).includes('bad'), 'planning: the starting order is broken and the deploy has no approval');
+  const moveTo = async (label, target) => { for (let k = 0; k < 6; k++) { const i = await D(page, l => [...document.querySelectorAll('#pl-list .txt')].findIndex(x => x.textContent === l), label); if (i === target) return; await page.click('#widget [data-' + (i > target ? 'up' : 'down') + '="' + i + '"]'); } };
+  await moveTo('Read the existing reports code', 0); await moveTo('Deploy to the live site', 4); await moveTo('Run the tests', 3);
+  ok((await page.locator('#pl-order').getAttribute('class')).includes('ok'), 'planning: with read first, tests after the code, and deploy last, the order works');
+  eq(await D(page, () => [WIDGETS._planProblems(['read', 'code', 'write', 'test', 'deploy']), WIDGETS._planProblems(['read', 'write', 'code', 'test', 'deploy']), WIDGETS._planProblems(['read', 'test', 'write', 'code', 'deploy'])]), [0, 0, 2], 'planning: more than one order is valid, and tests before code is not');
+  await page.check('#widget [data-gate="deploy"]');
+  ok((await page.locator('#pl-gate').getAttribute('class')).includes('ok'), 'planning: a person approving the deploy is enough');
+  for (const id of ['read', 'write', 'code']) await page.check('#widget [data-gate="' + id + '"]');
+  ok(/bottleneck/.test(await text(page, '#pl-gate')), 'planning: approvals on everything make you the bottleneck');
+  ok(await D(page, () => !!document.activeElement.dataset.gate), 'planning: focus stays on the control you used');
+
+  await goLesson(page, 'agents', 'memory');
+  await page.click('#widget [data-a="new"]');
+  ok(/We release on Thursdays/.test(await text(page, '#widget .msg.sum')) && !/British/.test(await text(page, '#widget .msg.sum')), 'memory: the new session starts with only what was saved');
+  await page.click('#widget [data-ask="day"]');
+  ok(/Thursdays/.test(await text(page, '#widget .msg.model')) && (await page.locator('#mm-verdict').getAttribute('class')).includes('ok'), 'memory: a saved fact is answered from the notes');
+  await page.click('#widget [data-ask="spell"]');
+  ok(/do not have that/.test(await text(page, '#widget .msg.model')), 'memory: an unsaved fact is gone');
+  await page.check('#widget [data-change]'); await page.click('#widget [data-ask="day"]');
+  ok(/Thursdays/.test(await text(page, '#widget .msg.model')) && /Stale/.test(await text(page, '#mm-verdict')), 'memory: when the facts change and the notes do not, the answer is stale');
+  await page.click('#widget [data-a="back"]'); await page.check('#widget [data-save="secret"]');
+  ok(await page.locator('#mm-secret').isVisible(), 'memory: saving a password to the notes raises a warning');
+
+  await goLesson(page, 'agents', 'agentfail');
+  ok(/36%/.test(await text(page, '#ch-out')), 'where agents fail: 95% a step over 20 steps is about 36%');
+  eq(await D(page, () => [WIDGETS._chain(0.95, 20, false), WIDGETS._chain(1, 40, false), WIDGETS._chain(0.9, 1, true)].map(x => +x.toFixed(4))), [0.3585, 1, 0.99], 'where agents fail: the sum is p to the power n, and a retry turns 90% into 99%');
+  eq(await page.locator('#ch-dots i.ok').count(), 36, 'where agents fail: 36 of the 100 dots are good runs');
+  await page.check('#ch-check');
+  ok(/95%/.test(await text(page, '#ch-out')), 'where agents fail: a check and one retry on each step lifts 36% to about 95%');
+  await setRange(page, '#ch-n', 1); await page.uncheck('#ch-check');
+  ok(/95%/.test(await text(page, '#ch-out')), 'where agents fail: one step is just the single-step rate');
 
   // ------------------------------------------------------------------ sandbox
   section('Prompt sandbox');
@@ -342,11 +400,13 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
   ok(await noSideScroll(page), 'map');
   ok(await D(page, () => { const z = document.querySelector('#zoombar').getBoundingClientRect(); return z.left >= 0 && z.right <= innerWidth; }), 'the zoom bar fits on screen');
   await D(page, () => ACADEMY_DEBUG.go(1, 'models')); ok(await noSideScroll(page), 'track');
-  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge']]) {
+  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge'], ['agents', 'tooluse'], ['agents', 'loop'], ['agents', 'planning'], ['agents', 'memory'], ['agents', 'agentfail']]) {
     await goLesson(page, t, c);
     if (c === 'training') await page.click('#widget [data-a="train"]');
     if (c === 'format') await page.click('#widget [data-f="2"]');
     if (c === 'judge') await page.click('#widget [data-ex="3"]');
+    if (c === 'loop') await page.click('#widget [data-a="run"]');
+    if (c === 'memory') { await page.check('#widget [data-save="secret"]'); await page.click('#widget [data-a="new"]'); await page.click('#widget [data-ask="secret"]'); }
     ok(await noSideScroll(page), 'lesson: ' + c);
     await page.locator('#quiz [data-opt="0"]').tap(); ok(await noSideScroll(page), 'lesson quiz answered: ' + c);
   }

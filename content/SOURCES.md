@@ -30,6 +30,22 @@ Product documentation changes often. Anything about a specific tool's limits, se
 | S18 | Anthropic docs, "Define success criteria and build evaluations". https://platform.claude.com/docs/en/test-and-evaluate/define-success | Define measurable success and build tests before iterating on a prompt | search summary; **verify** |
 | S19 | OWASP Top 10 for LLM Applications 2025, "LLM02:2025 Sensitive Information Disclosure". https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/ | Sensitive information disclosure is on the list | page title seen in search; **verify** |
 
+## Sources used in track 3 (Tools and agents)
+
+Checked on 2026-11-14 by web search summaries, same caveat as above: none of these pages was opened.
+
+| Id | Source | What the app takes from it | Status |
+|---|---|---|---|
+| S20 | Anthropic docs, "Tool use with Claude". https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview | A tool is defined by a name, a description and an input schema; the model returns a tool request; your application runs the tool and sends the result back; some provider-run tools execute on the provider's side | search summary, partly from translated versions of the page; **verify** |
+| S21 | Anthropic Engineering (December 2024), "Building effective agents". https://www.anthropic.com/engineering/building-effective-agents | The distinction between workflows and agents; workflows for predictability, agents for flexibility; chaining and orchestrator-with-workers patterns | search summary. The distinction and the predictability/flexibility line were seen; the exact wording and the pattern names come from secondary write-ups; **verify** |
+| S22 | Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao (2022), "ReAct: Synergizing Reasoning and Acting in Language Models", ICLR 2023. https://arxiv.org/abs/2210.03629 | Interleaving reasoning steps with actions | search summary, the abstract was not returned in full; **verify**. "Think, act, observe" is the usual shorthand, not a quote |
+| S23 | Model Context Protocol, introduction. https://modelcontextprotocol.io/ | MCP described as "an open-source standard for connecting AI applications to external systems" | search summary of a versioned docs page; **verify**. Wording **may be out of date** |
+| S24 | OWASP Top 10 for LLM Applications 2025, "LLM01:2025 Prompt Injection". https://genai.owasp.org/llmrisk/llm01-prompt-injection/ | Prompt injection is first on the list; the indirect kind arrives in outside content | search summary; **verify** |
+| S25 | OWASP Top 10 for LLM Applications 2025, "LLM06:2025 Excessive Agency". https://genai.owasp.org/llmrisk/llm062025-excessive-agency/ | Three root causes (excessive functionality, permissions, autonomy); least privilege; a person approving high-impact actions | search summary; **verify** |
+| S26 | Simon Willison (16 June 2025), "The lethal trifecta for AI agents: private data, untrusted content, and external communication". https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/ | The three-part combination, and that the defence is to avoid having all three | search summary and secondary sites; his post was not opened; **verify** |
+
+Track 3 also reuses R8 (Anthropic, "Effective context engineering for AI agents") for agents keeping notes outside the window.
+
 ## Sources used in the roles family tree
 
 | Id | Source | What the app takes from it | Status |
@@ -63,10 +79,12 @@ These are marked in the lesson text with "(Teaching judgment.)", "(My framing.)"
 - Where made-up answers are most likely (exact numbers, dates, names, citations).
 - The list of six prompt parts (role, task, context, format, constraints, example): my framing of a widely used pattern.
 - How structured output features work (restricting which tokens can be picked): a general description. Verify for your provider.
+- In track 3: "95% a step over 20 steps is about 36%" is arithmetic (0.95 to the power 20), assuming every step fails independently and equally often. It is an illustration, not a measurement of any tool. The retry figure assumes a check catches every failure.
+- In track 3: that an agent can report "done" when it is not; the three kinds of memory; that memory can go stale, leak or carry a planted instruction; that a plan can drift in a long run; and why prompt injection is hard to fix (one stream of tokens). Common explanations, not checked against one source.
 - In the roles tree: everything under "What AI changes", "What to learn" and "Where it is heading"; the "AI enablement coach" node (my observation, no source); the "Delivery lead for human and agent teams" node (a **forecast**, labelled so in the app); the order of the rows; and which arrows are drawn.
 
 ## Things in the app that are made up on purpose
 
-- The toy tokenizer's pieces and numbers, the next-word scores, the tiny trainable model, Team Heron and its page, the seven readings of the status-line request, the four role answers, the five risk formats and the iterate test cases are all written by hand. No model produced them and none runs in the app.
+- The toy tokenizer's pieces and numbers, the next-word scores, the tiny trainable model, Team Heron and its page, the seven readings of the status-line request, the four role answers, the five risk formats, the iterate test cases, the tool-use answers and ticket HER-42, the seven-step agent run, the export plan and the memory session are all written by hand. No model produced them and none runs in the app.
 - The sandbox's score is keyword matching. It is not a measure of prompt quality.
 - Example data in the sandbox (`jo.sample@example.com`, `4000 1234 5678 9010`, "Mr Sample") is invented.

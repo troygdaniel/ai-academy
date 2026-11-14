@@ -419,4 +419,169 @@ var WIDGETS = {};
     });
     update();
   };
+
+  // ---------- Tool use: the model asks, the app does ----------
+  function calc(expr) { var m = /^\s*(\d+)\s*([*+\-])\s*(\d+)\s*$/.exec(expr); if (!m) return 'error'; var a = +m[1], b = +m[3]; return String(m[2] === '*' ? a * b : m[2] === '+' ? a + b : a - b); } // a real sum, no eval
+  WIDGETS._calc = calc;
+  WIDGETS.tooluse = function (root, L) {
+    var st = mem('tooluse', { q: 0, on: { calc: true, ticket: true } });
+    root.innerHTML = '<fieldset class="seg"><legend>Tools the app offers the model</legend><div id="tu-tools"></div></fieldset><p class="note" style="margin-top:12px">Ask:</p><div class="exs" id="tu-qs"></div><ol class="trace" id="tu-trace" aria-live="polite"></ol><p class="verdict" id="tu-verdict" role="status"></p>';
+    function step(who, label, body, cls) { return '<li class="' + (cls || '') + '"><span class="who">' + who + '</span><b>' + label + '</b>' + body + '</li>'; }
+    function update() {
+      $('#tu-tools', root).innerHTML = L.toolbox.map(function (t) { return '<label><input type="checkbox" data-tool="' + t.id + '"' + (st.on[t.id] ? ' checked' : '') + '> <span><code>' + esc(t.name) + '</code> <span class="muted">' + esc(t.desc) + '</span></span></label>'; }).join('');
+      $('#tu-qs', root).innerHTML = L.questions.map(function (q, i) { return '<button type="button" data-q="' + i + '"' + (i === st.q ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(q.label) + '</button>'; }).join('');
+      var q = L.questions[st.q], tool = q.tool && L.toolbox.filter(function (t) { return t.id === q.tool; })[0], has = tool && st.on[tool.id], h, v = $('#tu-verdict', root);
+      h = step('You', 'ask', '<span>' + esc(q.q) + '</span>', 'you');
+      if (has) {
+        var result = tool.id === 'calc' ? calc(q.input.expression) : JSON.stringify(L.tickets[q.input.id]);
+        var shown = tool.id === 'calc' ? Number(result).toLocaleString('en-GB') : '';
+        h += step('Model', 'writes a tool request, and stops', '<pre class="pre">' + esc(JSON.stringify({ tool: tool.name, input: q.input })) + '</pre>', 'model') +
+          step('The app', 'runs the tool', '<pre class="pre">' + esc(result) + '</pre>', 'app') +
+          step('Model', 'answers, with the result in its window', '<span>' + esc(q.final.replace('{result}', shown)) + '</span>', 'model');
+        v.className = 'verdict ok'; v.textContent = 'Grounded in a real result. The model wrote two pieces of text; the app did the work.';
+      } else if (tool) {
+        h += step('Model', 'answers from what it learned in training', '<span>' + esc(q.guess) + '</span>', 'model');
+        v.className = 'verdict bad'; v.textContent = q.miss;
+      } else {
+        h += step('Model', 'answers directly', '<span>' + esc(q.final) + '</span>', 'model');
+        v.className = 'verdict ok'; v.textContent = 'No tool was needed, so none was called. The model decides, from the tool descriptions, whether one would help.';
+      }
+      $('#tu-trace', root).innerHTML = h;
+    }
+    root.addEventListener('change', function (e) { var id = e.target.dataset.tool; if (id) { st.on[id] = e.target.checked; update(); $('[data-tool="' + id + '"]', root).focus(); } });
+    onClick(root, function (d) { if (d.q) { st.q = +d.q; update(); $('[data-q="' + st.q + '"]', root).focus(); } });
+    update();
+  };
+
+  // ---------- The agent loop: think, act, observe, until done or stopped ----------
+  WIDGETS.loop = function (root, L) {
+    var st = mem('loop', { n: 0, max: 10 });
+    root.innerHTML = '<p class="prompt" style="font-size:16px">Goal: ' + esc(L.goal) + '</p><div class="ctl"><label for="lp-max">Step limit <b id="lp-maxv"></b></label><input type="range" id="lp-max" min="2" max="10" step="1"></div>' +
+      '<div class="row"><button type="button" class="btn primary" data-a="step">Next step</button><button type="button" class="btn" data-a="run">Run to the end</button><button type="button" class="btn" data-a="reset">Start again</button></div>' +
+      '<div class="meter" id="lp-meter" style="margin-top:12px"><i></i></div><p class="note" id="lp-used"></p><ol class="trace" id="lp-trace"></ol><p class="verdict" id="lp-verdict" role="status"></p>';
+    function update() {
+      var total = L.steps.length, done = st.n >= total, capped = !done && st.n >= st.max, used = L.base, h = '', edited = false;
+      L.steps.slice(0, st.n).forEach(function (s, i) {
+        used += s.t; if (s.edits) edited = true;
+        h += '<li class="model"><span class="who">Step ' + (i + 1) + '</span><span><b>Think</b> ' + esc(s.think) + '</span><span><b>Act</b> <code>' + esc(s.act) + '</code></span><span><b>Observe</b> ' + esc(s.obs) + '</span></li>';
+      });
+      $('#lp-trace', root).innerHTML = h;
+      $('#lp-maxv', root).textContent = st.max + ' steps';
+      $('i', $('#lp-meter', root)).style.width = Math.min(100, used / L.budget * 100) + '%';
+      $('#lp-used', root).textContent = 'Window: about ' + used + ' of ' + L.budget + ' toy tokens. Every observation stays in the window for the next step.';
+      $('[data-a="step"]', root).disabled = done || capped; $('[data-a="run"]', root).disabled = done || capped;
+      var v = $('#lp-verdict', root); v.hidden = !(done || capped);
+      v.className = 'verdict ' + (done ? 'ok' : 'bad');
+      v.textContent = done ? L.done + ' It took ' + total + ' steps, including one wrong turn that the tests caught.'
+        : 'Stopped at the step limit after ' + st.n + ' of the ' + total + ' steps it needed. ' + (edited ? 'The file has been edited and the tests still fail: a half-done change that someone has to pick up.' : 'Nothing has been changed yet, so no harm done, and no progress either.') + ' A limit protects you from a runaway loop; set too low, it leaves work half done.';
+    }
+    $('#lp-max', root).value = st.max;
+    root.addEventListener('input', function (e) { if (e.target.id === 'lp-max') { st.max = +e.target.value; st.n = Math.min(st.n, st.max); update(); } });
+    onClick(root, function (d) {
+      if (d.a === 'step') st.n = Math.min(st.n + 1, L.steps.length, st.max);
+      else if (d.a === 'run') st.n = Math.min(L.steps.length, st.max);
+      else if (d.a === 'reset') st.n = 0;
+      else return;
+      update(); var b = $('[data-a="' + d.a + '"]', root); if (b.disabled) b = $('[data-a="reset"]', root); b.focus();
+    });
+    update();
+  };
+
+  // ---------- Planning: order the steps, place the checkpoints ----------
+  WIDGETS.planning = function (root, L) {
+    var st = mem('planning', { order: L.start.slice(), gate: {} });
+    function byId(id) { return L.steps.filter(function (s) { return s.id === id; })[0]; }
+    function problems(order) { var out = []; order.forEach(function (id, i) { byId(id).needs.forEach(function (n) { if (order.indexOf(n) > i) out.push('"' + byId(id).text + '" comes before "' + byId(n).text + '", which it needs.'); }); }); return out; }
+    WIDGETS._planProblems = function (order) { return problems(order).length; };
+    root.innerHTML = '<p class="prompt" style="font-size:16px">Goal: ' + esc(L.goal) + '</p><ol class="plan" id="pl-list"></ol><p class="verdict" id="pl-order" role="status"></p><p class="verdict" id="pl-gate" role="status"></p>';
+    function update() {
+      var n = st.order.length;
+      $('#pl-list', root).innerHTML = st.order.map(function (id, i) {
+        var s = byId(id);
+        return '<li><span class="num">' + (i + 1) + '</span><span class="txt">' + esc(s.text) + '</span><span class="mv"><button type="button" class="btn" data-up="' + i + '" aria-label="Move ' + esc(s.text) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button><button type="button" class="btn" data-down="' + i + '" aria-label="Move ' + esc(s.text) + ' down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button></span>' +
+          '<label class="check"><input type="checkbox" data-gate="' + id + '"' + (st.gate[id] ? ' checked' : '') + '> A person approves before this step</label></li>';
+      }).join('');
+      var p = problems(st.order), o = $('#pl-order', root), g = $('#pl-gate', root), gates = L.steps.filter(function (s) { return st.gate[s.id]; }), risky = L.steps.filter(function (s) { return s.risky; })[0];
+      o.className = 'verdict ' + (p.length ? 'bad' : 'ok');
+      o.textContent = p.length ? 'The order does not work yet: ' + p[0] + (p.length > 1 ? ' And ' + (p.length - 1) + ' more.' : '') : 'The order works: every step has what it needs before it starts.';
+      g.className = 'verdict ' + (st.gate[risky.id] && gates.length <= 2 ? 'ok' : 'bad');
+      g.textContent = !st.gate[risky.id] ? 'Nobody approves "' + risky.text + '". It is the one step here that cannot be undone and that customers see.'
+        : gates.length > 2 ? gates.length + ' approvals. Safe, but you are now the bottleneck, and people who approve everything stop reading. Keep the ones where a mistake is expensive.'
+          : 'A person approves the deploy, and the steps that can be undone are left to flow.';
+    }
+    root.addEventListener('change', function (e) { var id = e.target.dataset.gate; if (id) { st.gate[id] = e.target.checked; update(); $('[data-gate="' + id + '"]', root).focus(); } });
+    onClick(root, function (d) {
+      var i = d.up !== undefined ? +d.up : d.down !== undefined ? +d.down : -1, j = d.up !== undefined ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= st.order.length) return;
+      var t = st.order[i]; st.order[i] = st.order[j]; st.order[j] = t; update();
+      var b = $(d.up !== undefined ? '[data-up="' + j + '"]' : '[data-down="' + j + '"]', root); if (b.disabled) b = $(d.up !== undefined ? '[data-down="' + j + '"]' : '[data-up="' + j + '"]', root); b.focus(); // the button follows the step it moved
+    });
+    update();
+  };
+
+  // ---------- Memory: what is saved comes back; what is not is gone; what is stale misleads ----------
+  WIDGETS.memory = function (root, L) {
+    var st = mem('memory', { saved: { day: true }, session: 1, changed: false, asked: '' });
+    root.innerHTML = '<div id="mm-body"></div>';
+    function update() {
+      var saved = L.facts.filter(function (f) { return st.saved[f.id]; }), secret = saved.some(function (f) { return f.secret; }), h;
+      var notes = saved.length ? saved.map(function (f) { return '- ' + f.text; }).join('\n') : '(empty)';
+      if (st.session === 1) {
+        h = '<div class="phase"><h4>Session 1 <span class="tag">you tell the agent three things</span></h4><div class="chat">' + L.facts.map(function (f) { return '<div class="msg you"><span class="who">You</span>' + esc(f.text) + '</div>'; }).join('') + '</div>' +
+          '<fieldset class="seg"><legend>Save to the agent\'s notes file</legend>' + L.facts.map(function (f) { return '<label><input type="checkbox" data-save="' + f.id + '"' + (st.saved[f.id] ? ' checked' : '') + '> ' + esc(f.text) + '</label>'; }).join('') + '</fieldset>' +
+          '<div class="row"><button type="button" class="btn primary" data-a="new">End the session and start a new one</button></div></div>';
+      } else {
+        var f = L.facts.filter(function (x) { return x.id === st.asked; })[0], ans = '', cls = '', why = '';
+        if (f) {
+          if (!st.saved[f.id]) { ans = 'I do not have that. Nothing from our last session is in my window.'; cls = 'bad'; why = 'It was said in session 1 and never saved, so for the agent it never happened.'; }
+          else if (st.changed && f.id === L.change.id) { ans = f.ans; cls = 'bad'; why = 'Stale. The notes still say the old thing, so the agent repeats it with full confidence. The truth is now ' + L.change.now + '.'; }
+          else if (f.secret) { ans = f.ans; cls = 'bad'; why = 'It worked, and that is the problem: a secret is sitting in a plain file that every future session, and anyone who can open the file, will read.'; }
+          else { ans = f.ans; cls = 'ok'; why = 'Read from the notes, which the tool loaded into the window at the start of this session.'; }
+        }
+        h = '<div class="phase"><h4>Session 2 <span class="tag">a fresh window</span></h4><p class="note" style="margin:0 0 6px">What the tool put in the window before you typed anything:</p>' +
+          '<div class="msg sys"><span class="who">System instructions</span>' + esc(L.system) + '</div><div class="msg sum" style="margin-top:8px"><span class="who">Notes file</span><span style="white-space:pre-wrap">' + esc(notes) + '</span></div>' +
+          '<label class="check" style="margin-top:12px"><input type="checkbox" data-change="1"' + (st.changed ? ' checked' : '') + '> ' + esc(L.change.label) + '</label>' +
+          '<p class="note" style="margin-top:12px">Ask:</p><div class="exs">' + L.facts.map(function (x) { return '<button type="button" data-ask="' + x.id + '"' + (x.id === st.asked ? ' class="on"' : '') + '>' + esc(x.ask) + '</button>'; }).join('') + '</div>' +
+          (f ? '<div class="chat" aria-live="polite"><div class="msg you"><span class="who">You</span>' + esc(f.ask) + '</div><div class="msg model"><span class="who">Agent</span>' + esc(ans) + '</div></div><p class="verdict ' + cls + '" id="mm-verdict" role="status">' + esc(why) + '</p>' : '') +
+          '<div class="row"><button type="button" class="btn" data-a="back">Back to session 1</button></div></div>';
+      }
+      if (secret) h += '<p class="verdict bad" id="mm-secret">You saved a password to the notes. Notes are plain text. Secrets belong in a secrets store, never in an agent\'s memory or instruction file.</p>';
+      $('#mm-body', root).innerHTML = h;
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset, sel;
+      if (d.save) { st.saved[d.save] = e.target.checked; sel = '[data-save="' + d.save + '"]'; } else if (d.change) { st.changed = e.target.checked; sel = '[data-change]'; } else return;
+      update(); $(sel, root).focus();
+    });
+    onClick(root, function (d) {
+      var sel;
+      if (d.a === 'new') { st.session = 2; st.asked = ''; sel = '[data-ask]'; } else if (d.a === 'back') { st.session = 1; sel = '[data-a="new"]'; } else if (d.ask) { st.asked = d.ask; sel = '[data-ask="' + d.ask + '"]'; } else return;
+      update(); $(sel, root).focus();
+    });
+    update();
+  };
+
+  // ---------- Where agents fail: small error rates compound ----------
+  function chain(p, n, check) { var q = check ? 1 - (1 - p) * (1 - p) : p; return Math.pow(q, n); }
+  WIDGETS._chain = chain;
+  WIDGETS.chain = function (root) {
+    var st = mem('chain', { p: 95, n: 20, check: false });
+    root.innerHTML = '<div class="ctl"><label for="ch-p">One step goes right <b id="ch-pv"></b></label><input type="range" id="ch-p" min="80" max="99.5" step="0.5">' +
+      '<label for="ch-n">Steps in the job <b id="ch-nv"></b></label><input type="range" id="ch-n" min="1" max="40" step="1">' +
+      '<label class="check"><input type="checkbox" id="ch-check"> Check each step, and redo a failed one once</label></div>' +
+      '<p class="big" id="ch-out" role="status"></p><div class="dots100" id="ch-dots" aria-hidden="true"></div><p class="note" id="ch-note"></p>';
+    function update() {
+      var all = chain(st.p / 100, st.n, st.check), pct = all * 100, good = Math.round(pct), h = '';
+      $('#ch-pv', root).textContent = st.p + ' times in 100'; $('#ch-nv', root).textContent = String(st.n);
+      $('#ch-out', root).innerHTML = '<b>' + (pct >= 99.95 ? '99.9' : pct.toFixed(pct < 10 ? 1 : 0)) + '%</b> of runs get every step right';
+      for (var i = 0; i < 100; i++) h += '<i class="' + (i < good ? 'ok' : 'bad') + '"></i>';
+      $('#ch-dots', root).innerHTML = h;
+      $('#ch-note', root).textContent = 'Out of 100 runs, about ' + good + ' finish with nothing wrong and about ' + (100 - good) + ' carry at least one mistake.' + (st.check ? ' With a check and one retry, a step only fails if it goes wrong twice in a row.' : st.n >= 10 && pct < 70 ? ' Each step looked dependable on its own. The length of the chain did this.' : '');
+    }
+    $('#ch-p', root).value = st.p; $('#ch-n', root).value = st.n; $('#ch-check', root).checked = st.check;
+    root.addEventListener('input', function (e) {
+      if (e.target.id === 'ch-p') st.p = +e.target.value; else if (e.target.id === 'ch-n') st.n = +e.target.value; else if (e.target.id === 'ch-check') st.check = e.target.checked; else return;
+      update();
+    });
+    update();
+  };
 })();
