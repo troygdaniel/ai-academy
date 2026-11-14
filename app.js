@@ -413,7 +413,7 @@
     else if (a === 'save') {
       var out = Object.assign({}, S, { names: [], saved: new Date().toISOString() }); // the names you listed for the sandbox stay out of the file
       var blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), x = document.createElement('a');
-      x.href = URL.createObjectURL(blob); x.download = 'ai-academy-progress.json'; document.body.appendChild(x); x.click(); x.remove(); setTimeout(function () { URL.revokeObjectURL(x.href); }, 2000); menuMsg = 'Saved ai-academy-progress.json to your downloads.';
+      x.href = URL.createObjectURL(blob); x.download = 'ai-academy-progress.json'; x.addEventListener('click', function (ev) { ev.stopPropagation(); }); document.body.appendChild(x); x.click(); x.remove(); // stopPropagation: or the page would see a click outside the menu and close it setTimeout(function () { URL.revokeObjectURL(x.href); }, 2000); menuMsg = 'Saved ai-academy-progress.json to your downloads.';
     } else if (a === 'load') { $('#m-file').click(); return; }
     else if (a === 'reset') { if (!resetArmed) { resetArmed = true; renderMenu(); $('[data-m="reset"]').focus(); setTimeout(function () { resetArmed = false; if (!$('#menu').hidden && $('[data-m="reset"]')) { var had = document.activeElement === $('[data-m="reset"]'); renderMenu(); if (had) $('[data-m="reset"]').focus(); } }, 4000); return; } resetArmed = false; S = fresh(); try { localStorage.removeItem(KEY); } catch (e) { /* nothing stored */ } Q = null; applyTheme(); applyRead(); $('#L2').dataset.key = ''; renderAll(); menuMsg = 'Progress erased.'; }
     renderMenu(); var again = $('[data-m="' + a + '"]'); if (again) again.focus();

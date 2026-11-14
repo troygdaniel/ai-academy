@@ -1,0 +1,438 @@
+// AI Academy checks, run in a real browser (headless Chromium through Playwright).
+//   node tests/run.js
+// The app itself needs nothing installed. Only this script needs Node and Playwright.
+// It opens index.html from disk (file://), exactly as a double-click would, and fails if the page asks for anything over the network.
+const { chromium } = require('playwright');
+const fs = require('fs'), path = require('path'), os = require('os');
+const ROOT = path.resolve(__dirname, '..'), URL = 'file://' + path.join(ROOT, 'index.html');
+
+let pass = 0, fail = 0; const failures = [];
+function ok(cond, name, extra) { if (cond) pass++; else { fail++; failures.push(name + (extra !== undefined ? '  [' + extra + ']' : '')); console.log('  FAIL  ' + name + (extra !== undefined ? '  [' + extra + ']' : '')); } }
+function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), name, 'got ' + JSON.stringify(a) + ', want ' + JSON.stringify(b)); }
+function section(s) { console.log('\n' + s); }
+
+async function open(browser, opts) {
+  const ctx = await browser.newContext(Object.assign({ viewport: { width: 1100, height: 850 }, acceptDownloads: true }, opts || {}));
+  const page = await ctx.newPage(); page.errors = []; page.net = [];
+  page.on('pageerror', e => page.errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') page.errors.push(m.text()); });
+  page.on('request', r => { if (!r.url().startsWith('file://') && !r.url().startsWith('blob:') && !r.url().startsWith('data:')) page.net.push(r.url()); });
+  await page.goto(URL);
+  return page;
+}
+const D = (page, fn, arg) => page.evaluate(fn, arg);
+const goLesson = (page, t, c) => page.evaluate(([t, c]) => { const s = ACADEMY_DEBUG.state(); s.pos.space = 'learn'; ACADEMY_DEBUG.go(2, t, c); }, [t, c]);
+const text = (page, sel) => page.locator(sel).innerText();
+const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+const noSideScroll = (page) => page.evaluate(() => { const l = document.querySelector('.layer.is-cur'); const sheet = [...document.querySelectorAll('#review, #sandbox')].find(x => !x.hidden); const el = sheet || l; return document.documentElement.scrollWidth <= innerWidth && el.scrollWidth <= el.clientWidth + 1; });
+
+(async () => {
+  const browser = await chromium.launch();
+
+  // ------------------------------------------------------------------ static rules
+  section('Static rules: offline, no secrets, nothing company-specific');
+  const files = ['index.html', 'style.css', 'content.js', 'widgets.js', 'app.js'];
+  const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]));
+  ok(!/<(script|link|img|iframe)[^>]+(src|href)="(https?:)?\/\//i.test(src['index.html']), 'index.html loads nothing from the network');
+  ok(!/@import|url\(\s*['"]?https?:/i.test(src['style.css']), 'style.css loads nothing from the network');
+  for (const f of ['content.js', 'widgets.js', 'app.js']) ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts)\b\s*\(/.test(src[f]) && !/new\s+(XMLHttpRequest|WebSocket|EventSource)/.test(src[f]), f + ' makes no network calls');
+  const all = fs.readdirSync(ROOT).filter(f => /\.(js|html|css|md)$/.test(f)).map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
+  ok(!/\bRBC\b|Royal Bank/i.test(all), 'no employer or bank is named anywhere');
+  ok(!/(api[_-]?key|secret|password|token)\s*[:=]\s*['"][A-Za-z0-9_\-]{12,}/i.test(all) && !/sk-[A-Za-z0-9]{20,}/.test(all), 'no key or secret in the repo files');
+
+  // ------------------------------------------------------------------ content shape
+  section('Content: every lesson has the full shape and a source for each id');
+  let page = await open(browser);
+  const shape = await D(page, () => {
+    const A = ACADEMY, out = { lessons: Object.keys(A.lessons), bad: [], ids: [], tracks: A.tracks.map(t => t.concepts.filter(c => A.lessons[c.id]).length) };
+    const has = id => A.sources.some(s => s.id === id);
+    for (const [id, L] of Object.entries(A.lessons)) {
+      if (!(L.idea && L.tryit && L.tryNote && L.agile && L.tools && L.under && L.under.p && L.read.length >= 3)) out.bad.push(id + ': missing a part');
+      if (L.quiz.length !== 4) out.bad.push(id + ': not four questions');
+      L.quiz.forEach(q => { out.ids.push(q.id); if (!(q.opts.length === 4 && q.a >= 0 && q.a < 4 && q.why)) out.bad.push(q.id + ': bad question'); });
+      if (!WIDGETS[L.widget]) out.bad.push(id + ': no widget');
+      if (!L.src.length || !L.src.every(has)) out.bad.push(id + ': source missing');
+      const words = [L.idea, L.agile, L.tools, L.under.p].concat(L.read.map(r => r.p)).join(' ').split(/\s+/).length; if (words > 900) out.bad.push(id + ': too long for ten minutes (' + words + ' words)');
+    }
+    const R = A.roles; R.nodes.forEach(n => { if (!(n.one && n.heading && n.read.length >= 2 && n.src.every(has))) out.bad.push('role ' + n.id); });
+    R.families.forEach(f => f.quiz.forEach(q => { out.ids.push(q.id); if (!(q.opts.length === 4 && q.a >= 0 && q.a < 4 && q.why)) out.bad.push(q.id); }));
+    out.dupe = out.ids.length !== new Set(out.ids).size; out.roles = R.nodes.length; out.forecast = R.nodes.filter(n => n.forecast).length;
+    return out;
+  });
+  eq(shape.bad, [], 'all lessons, roles and questions are well formed');
+  eq(shape.lessons.length, 11, 'eleven lessons');
+  eq(shape.tracks.slice(0, 3), [5, 6, 0], 'track 1 has five lessons, track 2 has six, track 3 none yet');
+  ok(!shape.dupe, 'question ids are unique');
+  const md = fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
+  const srcIds = await D(page, () => ACADEMY.sources.map(s => s.id));
+  ok(srcIds.every(id => new RegExp('\\| ' + id + ' \\|').test(md)), 'every source id used in the app is listed in content/SOURCES.md', srcIds.filter(id => !new RegExp('\\| ' + id + ' \\|').test(md)).join(','));
+
+  // ------------------------------------------------------------------ map and zoom
+  section('Map and zoom');
+  eq(await page.locator('#L0 .tcard').count(), 9, 'the map shows nine tracks');
+  ok(/5 lessons ready/.test(await text(page, '#L0 .tcard >> nth=0')) && /6 lessons ready/.test(await text(page, '#L0 .tcard >> nth=1')), 'tracks 1 and 2 are marked ready');
+  await page.click('#L0 .tcard >> nth=0');
+  eq(await D(page, () => ACADEMY_DEBUG.state().pos.zoom), 1, 'tapping a track zooms to Track');
+  eq(await page.locator('#L1 .node:not([disabled])').count(), 5, 'track 1 lists five open lessons');
+  await page.keyboard.press('+'); await page.keyboard.press('+');
+  eq(await D(page, () => ACADEMY_DEBUG.state().pos.zoom), 3, 'the + key zooms in to Detail');
+  ok((await text(page, '#L3')).includes('Under the hood') && (await text(page, '#L3')).includes('Sources'), 'Detail shows the layer underneath and the sources');
+  eq(await D(page, () => document.activeElement.tagName), 'H1', 'after a zoom, keyboard focus lands on the heading');
+  const fs0 = await D(page, () => parseFloat(getComputedStyle(document.querySelector('#L3 .article')).fontSize));
+  await page.click('#L3 [data-act="bigger"]');
+  ok(await D(page, () => parseFloat(getComputedStyle(document.querySelector('#L3 .article')).fontSize)) > fs0 && fs0 >= 20, 'Read more is in big type and A+ makes it bigger');
+  await page.keyboard.press('-'); await page.keyboard.press('-'); await page.keyboard.press('-');
+  eq(await D(page, () => ACADEMY_DEBUG.state().pos.zoom), 0, 'the - key zooms back out to the Map');
+  eq(await D(page, () => [...document.querySelectorAll('.layer')].map(l => l.inert)), [false, true, true, true], 'layers you are not on are inert, so Tab cannot wander into them');
+
+  // ------------------------------------------------------------------ the pictures you can poke
+  section('Track 1 pictures');
+  await goLesson(page, 'models', 'tokens');
+  await page.fill('#tk-in', 'We plan the sprint.');
+  ok(await page.locator('#tk-chips .tok').count() >= 4, 'tokens: typing makes token chips');
+  await page.click('#widget [data-ex="1"]');
+  ok(await page.locator('#tk-chips .tok').count() > 5, 'tokens: a rare word splits into many pieces');
+
+  await goLesson(page, 'models', 'context');
+  ok((await page.locator('#cx-verdict').getAttribute('class')).includes('ok'), 'context: at the start the codename is still in the window');
+  await setRange(page, '#cx-turns', 9); await setRange(page, '#cx-win', 80);
+  ok((await page.locator('#cx-verdict').getAttribute('class')).includes('bad') && await page.locator('#cx-chat .msg.out').count() > 0, 'context: a long chat in a small window drops the oldest turns and the codename');
+  ok(await D(page, () => !document.querySelector('#cx-chat .msg:last-child').classList.contains('out')), 'context: the newest message always stays');
+  await setRange(page, '#cx-win', 140); await page.check('#cx-sum');
+  ok((await page.locator('#cx-verdict').getAttribute('class')).includes('ok') && await page.locator('#cx-chat .msg.sum').count() === 1, 'context: a summary of the dropped turns brings the codename back');
+  ok(await D(page, () => { const m = /(\d+) of (\d+) toy tokens/.exec(document.querySelector('#cx-used').textContent); return +m[1] <= +m[2]; }), 'context: what is kept never exceeds the window');
+
+  await goLesson(page, 'models', 'nexttoken');
+  const sm = await D(page, () => { const l = [3.2, 2.4, 1.5, 1.3, 0.4, -1.5], s = T => WIDGETS._softmax(l, T); const sum = a => a.reduce((x, y) => x + y, 0); return { s1: sum(s(1)), s0: s(0), top05: s(0.5)[0], top1: s(1)[0], top2: s(2)[0], exact: Math.abs(s(1)[0] - Math.exp(3.2) / sum(l.map(Math.exp))) }; });
+  ok(Math.abs(sm.s1 - 1) < 1e-9 && sm.exact < 1e-9, 'next token: softmax matches the formula and sums to 1');
+  eq(sm.s0, [1, 0, 0, 0, 0, 0], 'next token: temperature 0 always takes the top one');
+  ok(sm.top05 > sm.top1 && sm.top1 > sm.top2, 'next token: lower temperature sharpens, higher flattens');
+  await setRange(page, '#nt-t', 0); await page.click('#widget [data-n="20"]');
+  ok(/20 picks, 1 different word/.test(await text(page, '#nt-sum')), 'next token: twenty picks at temperature 0 give one word');
+  await page.click('#widget [data-n="0"]'); await setRange(page, '#nt-t', 2);
+  await D(page, () => { let i = 0; Math.random = () => ((i++ * 0.37) % 1); }); // a fixed sequence, so the check is repeatable
+  await page.click('#widget [data-n="20"]');
+  ok(+/(\d+) different/.exec(await text(page, '#nt-sum'))[1] >= 3, 'next token: twenty picks at temperature 2 give several different words');
+
+  await goLesson(page, 'models', 'training');
+  await page.click('#widget [data-start="team"]');
+  ok(/Train it first/.test(await text(page, '#tr-out')), 'training: an untrained model has nothing to say');
+  await page.click('#widget [data-a="train"]');
+  ok(/trained on \d+ words/.test(await text(page, '#tr-state')) && await page.locator('#tr-weights tr').count() >= 3, 'training: Train fills the table of what followed what');
+  await page.click('#widget [data-start="team"]');
+  ok(/^team \w+/.test(await text(page, '#tr-out')), 'training: using it continues the sentence from what it learned');
+  await page.click('#widget [data-start="cook"]');
+  ok(/not in its training text/.test(await text(page, '#tr-out')), 'training: a word it never saw is outside what it knows');
+  const before = await D(page, () => document.querySelector('#tr-weights').innerHTML);
+  await page.fill('#tr-text', 'The cook chops the onions.'); await page.click('#widget [data-start="cook"]');
+  ok(before === await D(page, () => document.querySelector('#tr-weights').innerHTML) && /text changed since training/.test(await text(page, '#tr-state')) && /Changes to its weights from using it: 0/.test(await text(page, '#tr-note')), 'training: using it, or editing the text, does not change the weights until you retrain');
+  await page.click('#widget [data-a="train"]'); await page.click('#widget [data-start="cook"]');
+  ok(/^cook \w+/.test(await text(page, '#tr-out')), 'training: after retraining it knows the new word');
+
+  await goLesson(page, 'models', 'wrong');
+  await page.click('#widget [data-q="1"]');
+  ok(/42 points/.test(await text(page, '#wr-chat')), 'sure and wrong: made to always answer, it invents a number in a confident voice');
+  await page.click('#wr-check');
+  ok(/Invented/.test(await text(page, '#wr-verdict')), 'sure and wrong: checking against the page shows it was invented');
+  await page.check('#widget input[value="idk"]'); await page.click('#widget [data-q="1"]');
+  ok(/do not know/.test(await text(page, '#wr-chat')), 'sure and wrong: allowed to abstain, it says it does not know');
+  eq(await D(page, () => [...document.querySelectorAll('#wr-score tbody tr')].map(r => [...r.querySelectorAll('td')].slice(3).map(td => +td.textContent))), [[3, 0], [3, 3], [3, 3]], 'sure and wrong: bluffing scores the same when wrong answers are free, and worse when they cost');
+
+  section('Track 2 pictures');
+  await goLesson(page, 'prompting', 'parts');
+  ok(/1 of 6/.test(await text(page, '#pt-score')), 'parts: with only the task, the rubric finds one part');
+  for (const id of ['role', 'context', 'format', 'constraints', 'example']) await page.check('#widget [data-part="' + id + '"]');
+  ok(/6 of 6/.test(await text(page, '#pt-score')) && (await text(page, '#pt-prompt')).startsWith('You are'), 'parts: with all six on, the rubric finds six and the prompt reads as a brief');
+  const single = await D(page, () => ACADEMY.lessons.parts.parts.map(p => WIDGETS._score(p.text + '\n\n' + ACADEMY.lessons.parts.material).parts.filter(x => x.ok).map(x => x.id).join()));
+  eq(single, ['role', 'task', 'context', 'format', 'constraints', 'example'], 'parts: each part on its own ticks only its own rubric line');
+
+  await goLesson(page, 'prompting', 'examples');
+  ok(/7 of 7/.test(await text(page, '#nw-count')), 'show, do not tell: seven readings fit the bare request');
+  for (const i of [0, 1, 2]) await page.check('#widget [data-tell="' + i + '"]');
+  ok(/5 of 7/.test(await text(page, '#nw-count')), 'show, do not tell: three adjectives still leave five readings');
+  await page.check('#widget [data-show="0"]');
+  ok(/2 of 7/.test(await text(page, '#nw-count')), 'show, do not tell: one example leaves two (it may copy "medium")');
+  await page.check('#widget [data-show="1"]');
+  ok(/1 of 7/.test(await text(page, '#nw-count')) && /\(high\)/.test(await text(page, '#nw-cands li:not(.out)')), 'show, do not tell: two varied examples leave one');
+
+  await goLesson(page, 'prompting', 'roles');
+  const r0 = await text(page, '#rp-chat'); await page.click('#widget [data-v="2"]');
+  ok(r0 !== await text(page, '#rp-chat') && /loan/.test(await text(page, '#rp-chat')), 'roles: a different role gives a different voice');
+
+  await goLesson(page, 'prompting', 'format');
+  await page.click('#widget [data-f="3"]');
+  ok(/parser stopped/.test(await text(page, '#fp-checks')), 'format: JSON asked for loosely comes wrapped in chat and does not parse');
+  await page.click('#widget [data-f="4"]');
+  ok(/parsed 3 items/.test(await text(page, '#fp-checks')), 'format: JSON asked for precisely parses');
+  await page.click('#widget [data-f="2"]');
+  eq(await page.locator('#fp-out table tbody tr').count(), 3, 'format: the table has three rows');
+
+  await goLesson(page, 'prompting', 'iterate');
+  ok(/0 of 4/.test(await text(page, '#it-count')), 'iterate: the first draft passes no test case');
+  for (const id of ['who', 'list', 'none']) await page.check('#widget [data-fix="' + id + '"]');
+  ok(/4 of 4/.test(await text(page, '#it-count')), 'iterate: three targeted changes pass all four');
+  await page.check('#widget [data-fix="creative"]');
+  ok(/2 of 4/.test(await text(page, '#it-count')) && /regression/i.test(await text(page, '#it-log')), 'iterate: "be creative" breaks two cases and the log calls it a regression');
+
+  // ------------------------------------------------------------------ sandbox
+  section('Prompt sandbox');
+  await goLesson(page, 'prompting', 'judge');
+  ok(/1 of 6/.test(await text(page, '#L2 #sb-score')), 'judge lesson: the weak example scores one');
+  await page.click('#L2 #widget [data-ex="2"]');
+  ok(/6 of 6/.test(await text(page, '#L2 #sb-score')) && /No obvious real data/.test(await text(page, '#L2 #sb-warn')), 'judge lesson: the strong example scores six and raises no data warning');
+  await page.keyboard.press('Escape'); await D(page, () => document.activeElement.blur());
+  await page.keyboard.press('s');
+  ok(await page.locator('#sandbox').isVisible() && await D(page, () => document.activeElement.id === 'sb-title'), 'the S key opens the sandbox and moves focus into it');
+  ok(await D(page, () => document.querySelector('#stage').inert && document.querySelector('#bar').inert), 'while the sandbox is open the page behind is inert');
+  await page.fill('#sandbox #sb-text', 'Email jo.sample@example.com about card 4000 1234 5678 9010. Dr Sample and Priya Natarajan are copied. Project Kestrel is late.');
+  const warns = await page.locator('#sandbox #sb-warn li').allInnerTexts();
+  ok(warns.some(w => /jo\.sample@example\.com/.test(w)), 'sandbox warns on an email address');
+  ok(warns.some(w => /4000 1234 5678 9010/.test(w)), 'sandbox warns on a long run of digits');
+  ok(warns.some(w => /Dr Sample/.test(w)) && warns.some(w => /Priya Natarajan/.test(w)), 'sandbox warns on a title with a name and on two capitalised words');
+  ok(!warns.some(w => /kestrel/i.test(w) && /watch list/.test(w)), 'before it is listed, the project name is not on the watch list');
+  await page.fill('#sandbox #sb-names', 'Kestrel, Heron');
+  ok((await page.locator('#sandbox #sb-warn li').allInnerTexts()).some(w => /Kestrel/.test(w) && /watch list/.test(w)), 'a name you list is flagged');
+  eq(await D(page, () => ACADEMY_DEBUG.state().names), ['Kestrel', 'Heron'], 'the watch list is kept in the browser');
+  await page.fill('#sandbox #sb-text', 'You are a Scrum Master. Summarise the Sprint Review notes for the Product Owner in three bullets, under 60 words.');
+  ok(/No obvious real data/.test(await text(page, '#sandbox #sb-warn')), 'ordinary agile words (Scrum Master, Sprint Review, Product Owner) are not mistaken for names');
+  ok(/[45] of 6/.test(await text(page, '#sandbox #sb-score')), 'that prompt scores well on the rubric');
+  ok(await D(page, () => !/Summarise the Sprint Review/.test(JSON.stringify(ACADEMY_DEBUG.state())) && !/Summarise the Sprint Review/.test(localStorage.getItem('aiacademy.v1') || '')), 'what you type in the sandbox is not stored');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#sandbox').isHidden() && await D(page, () => !document.querySelector('#stage').inert), 'Esc closes the sandbox and the page is live again');
+  const scan = await D(page, () => ({ clean: WIDGETS._scan('The Team met on Monday. Help Needed: none.', []).length, short: WIDGETS._scan('Ticket 12345 and build 2026.', []).length, phone: WIDGETS._scan('call 555-010-9999', []).length }));
+  eq(scan, { clean: 0, short: 0, phone: 1 }, 'the data check ignores short numbers and plain headings, and catches a phone-length number');
+  await page.close();
+
+  // ------------------------------------------------------------------ quiz, XP, cards by keyboard
+  section('A lesson quiz by keyboard, XP, review cards');
+  page = await open(browser);
+  await goLesson(page, 'models', 'tokens');
+  const answers = await D(page, () => ACADEMY.lessons.tokens.quiz.map(q => q.a));
+  await page.keyboard.press(String(answers[0] + 1));
+  ok(await page.locator('#quiz .opt.right').count() === 1 && /Right/.test(await text(page, '#quiz .why')), 'pressing a number answers; the right option is marked with a tick and words, not colour alone');
+  ok(/✓ correct/.test(await text(page, '#quiz .opt.right')), 'the correct option carries a text mark');
+  eq(await D(page, () => document.activeElement.dataset.act), 'next', 'focus moves to Next question');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press(String(((answers[1] + 1) % 4) + 1)); // a wrong one on purpose
+  ok(/Not quite/.test(await text(page, '#quiz .why')) && /✗ your pick/.test(await text(page, '#quiz .opt.wrong')), 'a wrong answer is shown as wrong, with the reason');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press(String(answers[2] + 1)); await page.keyboard.press('Enter');
+  await page.keyboard.press(String(answers[3] + 1)); await page.keyboard.press('Enter');
+  ok(/3 of 4 right/.test(await text(page, '#quiz')), 'the quiz ends with the score');
+  let st = await D(page, () => ACADEMY_DEBUG.state());
+  eq(st.xp, 5 + 1 + 5 + 5 + 20, 'XP: 5 per right answer, 1 for a miss, 20 for finishing');
+  eq(Object.keys(st.cards).length, 4, 'four review cards were made');
+  eq([st.cards['tokens.q1'].int, st.cards['tokens.q1'].rep, st.cards['tokens.q2'].rep], [1, 1, 0], 'a right answer is due tomorrow; the missed one restarts');
+  eq(await D(page, () => ACADEMY_DEBUG.dueIds()), ['tokens.q2'], 'the missed card is due again today');
+  ok(/Next lesson: The context window/.test(await text(page, '#quiz')), 'the finish screen offers the next lesson');
+  await page.click('#quiz [data-act="nextlesson"]');
+  eq(await D(page, () => ACADEMY_DEBUG.state().pos.concept), 'context', 'Next lesson chains on');
+  ok(/1\s*day streak/.test(await text(page, '#c-streak')) && /Level\s*1/.test(await text(page, '#c-level')), 'streak and level chips update', await text(page, '#c-streak') + ' | ' + await text(page, '#c-level'));
+  await page.click('#quiz [data-opt="0"]'); await page.click('#quiz [data-act="next"]');
+  const xpBefore = await D(page, () => ACADEMY_DEBUG.state().xp);
+  await goLesson(page, 'models', 'tokens'); await page.keyboard.press(String(answers[0] + 1));
+  eq(await D(page, () => ACADEMY_DEBUG.state().xp), xpBefore, 'replaying a question you have seen earns no XP and keeps the card schedule');
+
+  // ------------------------------------------------------------------ SM-2
+  section('Spaced repetition (SM-2) intervals');
+  const sm2 = await D(page, () => {
+    const g = ACADEMY_DEBUG.grade, S = ACADEMY_DEBUG.state(), t = ACADEMY_DEBUG.dayNow(), out = {};
+    const run = (id, qs) => qs.map(q => { g(id, q); const c = S.cards[id]; return [c.int, +c.ef.toFixed(2), c.rep, c.due - t]; });
+    out.good = run('t.good', [4, 4, 4, 4]);
+    out.easy = run('t.easy', [5, 5, 5]);
+    out.hard = run('t.hard', [3, 3, 3]);
+    out.lapse = run('t.lapse', [4, 4, 4, 1, 4, 4]);
+    out.floor = run('t.floor', Array(12).fill(3)).pop()[1];
+    ['t.good', 't.easy', 't.hard', 't.lapse', 't.floor'].forEach(id => delete S.cards[id]);
+    return out;
+  });
+  eq(sm2.good, [[1, 2.5, 1, 1], [6, 2.5, 2, 6], [15, 2.5, 3, 15], [38, 2.5, 4, 38]], 'Good x4: 1 day, 6 days, then x2.5 (15, 38); ease stays 2.5');
+  eq(sm2.easy, [[1, 2.6, 1, 1], [6, 2.7, 2, 6], [17, 2.8, 3, 17]], 'Easy: ease rises 0.1 each time; third interval is 6 x 2.7 rounded up');
+  eq(sm2.hard, [[1, 2.36, 1, 1], [6, 2.22, 2, 6], [14, 2.08, 3, 14]], 'Hard: ease falls 0.14 each time; third interval is 6 x 2.22 rounded up');
+  eq(sm2.lapse.slice(3), [[1, 2.5, 0, 0], [1, 2.5, 1, 1], [6, 2.5, 2, 6]], 'Again: the card restarts, is due today, and the ease is unchanged');
+  eq(sm2.floor, 1.3, 'the ease never drops below 1.3');
+
+  section('Review session');
+  await D(page, () => { const S = ACADEMY_DEBUG.state(), t = ACADEMY_DEBUG.dayNow(); Object.keys(S.cards).forEach(id => { S.cards[id].due = t; }); ACADEMY_DEBUG.go(0); });
+  const dueN = await D(page, () => ACADEMY_DEBUG.dueIds().length);
+  ok(new RegExp('Review\\s*' + dueN).test(await text(page, '#c-review')), 'the Review chip counts the due cards');
+  await D(page, () => document.activeElement.blur()); await page.keyboard.press('r');
+  ok(await page.locator('#review').isVisible() && /card 1 of/i.test(await text(page, '#review')), 'the R key opens the review');
+  const first = await D(page, () => { const id = ACADEMY_DEBUG.dueIds()[0]; const all = Object.values(ACADEMY.lessons).flatMap(l => l.quiz); return { id, a: all.find(q => q.id === id).a, rep: ACADEMY_DEBUG.state().cards[id].rep }; });
+  await page.keyboard.press(String(first.a + 1));
+  ok(/How did that feel/.test(await text(page, '#review')), 'a right answer asks Hard, Good or Easy');
+  await page.keyboard.press('2');
+  const after = await D(page, id => { const c = ACADEMY_DEBUG.state().cards[id]; return { rep: c.rep, ahead: c.due - ACADEMY_DEBUG.dayNow() }; }, first.id);
+  ok(after.rep === first.rep + 1 && after.ahead >= 1, 'Good moves the card forward and into the future');
+  ok(/card 2 of/i.test(await text(page, '#review')), 'the next card comes up');
+  const second = await D(page, () => { const id = ACADEMY_DEBUG.dueIds()[0]; const all = Object.values(ACADEMY.lessons).flatMap(l => l.quiz); return { id, a: all.find(q => q.id === id).a }; });
+  await page.keyboard.press(String(((second.a + 1) % 4) + 1)); await page.keyboard.press('Enter');
+  eq(await D(page, id => { const c = ACADEMY_DEBUG.state().cards[id]; return [c.rep, c.due - ACADEMY_DEBUG.dayNow()]; }, second.id), [0, 0], 'a miss in review restarts the card and keeps it due today');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#review').isHidden(), 'Esc closes the review');
+  await D(page, () => { const S = ACADEMY_DEBUG.state(), t = ACADEMY_DEBUG.dayNow(); S.days = {}; S.days[t] = { min: 3, xp: 5 }; S.days[t - 1] = { min: 12, xp: 0 }; S.days[t - 2] = { min: 0, xp: 9 }; S.days[t - 4] = { min: 9, xp: 9 }; ACADEMY_DEBUG.go(0); });
+  ok(/3\s*day streak/.test(await text(page, '#c-streak')), 'streak counts back over consecutive active days and stops at a gap');
+  ok(/3\s*\/ 10 min/.test(await text(page, '#c-goal')), 'the goal chip shows minutes studied today against the goal');
+
+  // ------------------------------------------------------------------ roles tree
+  section('Roles family tree');
+  await D(page, () => document.activeElement.blur()); await page.keyboard.press('t');
+  eq(await page.locator('#L0 .rnode').count(), 17, 'the T key opens the tree with seventeen roles');
+  eq(await page.locator('#L0 .rnode.you').count(), 3, 'Project Manager, Scrum Master and Agile Coach are marked as yours');
+  ok(await page.locator('#L0 .rnode.fc').count() >= 1 && /forecast/.test(await text(page, '#L0 .rnode.fc >> nth=0')), 'forecast roles are labelled as forecasts');
+  ok(/Ian Miell/.test(await text(page, '#L0')) && await page.locator('#L0 a[href*="ianmiell.github.io"]').count() === 1, 'the tree credits Ian Miell with a link');
+  eq(await text(page, '#z-stops'), 'Tree\nFamily\nRole\nDetail', 'the zoom stops read Tree, Family, Role, Detail');
+  await page.click('#L0 [data-filter="ops"]');
+  ok(await page.locator('#L0 .rnode.dim').count() === 13, 'a family filter dims the other families');
+  await page.click('#L0 [data-filter=""]');
+  await page.click('#L0 [data-role="sm"]');
+  ok(/Scrum Master/.test(await text(page, '#L2 h1')) && /Where it came from/i.test(await text(page, '#L2')), 'tapping a role zooms to it and shows where it came from and leads');
+  await page.keyboard.press('+');
+  ok(/What AI changes/.test(await text(page, '#L3')) && /R9/.test(await text(page, '#L3')) && await D(page, () => parseFloat(getComputedStyle(document.querySelector('#L3 .article')).fontSize) >= 20), 'zooming in again opens the big-type Read more with its source');
+  await page.keyboard.press('-'); await page.keyboard.press('-');
+  ok(/Delivery and agile/.test(await text(page, '#L1 h1')) && await page.locator('#L1 .node').count() === 5, 'zooming out shows the family and its five roles');
+  const fa = await D(page, () => ACADEMY.roles.families[0].quiz.map(q => q.a));
+  for (const a of fa) { await page.keyboard.press(String(a + 1)); await page.keyboard.press('Enter'); }
+  ok(/3 of 3 right/.test(await text(page, '#fquiz')), 'the family quiz works by keyboard');
+  ok(await D(page, () => !!ACADEMY_DEBUG.state().cards['roles.delivery.q1']), 'roles questions become review cards');
+  await page.keyboard.press('m');
+  eq(await D(page, () => ACADEMY_DEBUG.state().pos.space), 'learn', 'the M key returns to the learning map');
+
+  // ------------------------------------------------------------------ save and load
+  section('Save and Load to a file');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'academy-'));
+  await page.click('#c-menu');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#menu [data-m="save"]')]);
+  const saved = path.join(tmp, 'progress.json'); await dl.saveAs(saved);
+  const file = JSON.parse(fs.readFileSync(saved, 'utf8'));
+  eq(dl.suggestedFilename(), 'ai-academy-progress.json', 'Save downloads ai-academy-progress.json');
+  ok(file.v === 1 && Object.keys(file.cards).length >= 7 && file.xp > 0 && file.done.tokens === true, 'the file holds the cards, XP and finished lessons');
+  eq(file.names, [], 'the sandbox watch list is left out of the file');
+  const want = await D(page, () => { const s = ACADEMY_DEBUG.state(); return [s.xp, Object.keys(s.cards).sort(), s.done, s.days]; });
+  await page.click('#menu [data-m="reset"]'); await page.click('#menu [data-m="reset"]');
+  eq(await D(page, () => { const s = ACADEMY_DEBUG.state(); return [s.xp, Object.keys(s.cards).length]; }), [0, 0], 'Reset (pressed twice) erases progress');
+  await page.setInputFiles('#m-file', saved);
+  await page.waitForFunction(() => /Progress loaded/.test(document.querySelector('#menu').textContent));
+  eq(await D(page, () => { const s = ACADEMY_DEBUG.state(); return [s.xp, Object.keys(s.cards).sort(), s.done, s.days]; }), want, 'Load brings everything back exactly');
+  await page.waitForTimeout(50);
+  ok(await D(page, () => JSON.parse(localStorage.getItem('aiacademy.v1')).xp > 0), 'loaded progress is written to the browser store straight away');
+  const bad = path.join(tmp, 'bad.json'); fs.writeFileSync(bad, '{"hello": "world"}');
+  await page.setInputFiles('#m-file', bad);
+  await page.waitForFunction(() => /not an AI Academy progress file/.test(document.querySelector('#menu').textContent));
+  eq(await D(page, () => ACADEMY_DEBUG.state().xp), want[0], 'a file that is not a progress file is refused and nothing changes');
+  const junk = path.join(tmp, 'junk.json'); fs.writeFileSync(junk, 'not json at all');
+  await page.setInputFiles('#m-file', junk);
+  await page.waitForFunction(() => /not an AI Academy progress file/.test(document.querySelector('#menu').textContent));
+  const t0 = await D(page, () => ACADEMY_DEBUG.dayNow());
+  const legacy = path.join(tmp, 'legacy.json'); // the shape the first prototype saved: no names, no roles position
+  fs.writeFileSync(legacy, JSON.stringify({ v: 1, xp: 36, days: { [t0]: { min: 4, xp: 36 } }, cards: { 'tokens.q1': { ef: 2.5, rep: 1, int: 1, due: t0 + 1, n: 1 }, 'gone.q9': { ef: 2.5, rep: 1, int: 1, due: t0, n: 1 }, 'broken': { ef: 'x' } }, done: { tokens: true }, goal: 20, read: 24, theme: 'dark', pos: { track: 'models', concept: 'tokens', zoom: 2 } }));
+  await page.setInputFiles('#m-file', legacy);
+  await page.waitForFunction(() => ACADEMY_DEBUG.state().xp === 36);
+  const lg = await D(page, () => { const s = ACADEMY_DEBUG.state(); return [s.goal, s.read, s.theme, s.pos.space, s.pos.zoom, !!s.cards['tokens.q1'], !!s.cards.broken, ACADEMY_DEBUG.dueIds(), document.documentElement.dataset.theme]; });
+  eq(lg, [20, 24, 'dark', 'learn', 2, true, false, [], 'dark'], 'a file from the first prototype still loads; a damaged card is dropped and a card for a question that no longer exists is ignored');
+  await page.reload();
+  eq(await D(page, () => [ACADEMY_DEBUG.state().xp, ACADEMY_DEBUG.state().pos.zoom]), [36, 2], 'progress and position survive a reload');
+  eq(page.errors, [], 'no script errors on the desktop run');
+  eq(page.net, [], 'the page asked for nothing over the network');
+  await page.close();
+
+  // ------------------------------------------------------------------ phone width
+  section('Phone width (360 px): nothing scrolls sideways');
+  page = await open(browser, { viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
+  ok(await noSideScroll(page), 'map');
+  ok(await D(page, () => { const z = document.querySelector('#zoombar').getBoundingClientRect(); return z.left >= 0 && z.right <= innerWidth; }), 'the zoom bar fits on screen');
+  await D(page, () => ACADEMY_DEBUG.go(1, 'models')); ok(await noSideScroll(page), 'track');
+  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge']]) {
+    await goLesson(page, t, c);
+    if (c === 'training') await page.click('#widget [data-a="train"]');
+    if (c === 'format') await page.click('#widget [data-f="2"]');
+    if (c === 'judge') await page.click('#widget [data-ex="3"]');
+    ok(await noSideScroll(page), 'lesson: ' + c);
+    await page.locator('#quiz [data-opt="0"]').tap(); ok(await noSideScroll(page), 'lesson quiz answered: ' + c);
+  }
+  await D(page, () => ACADEMY_DEBUG.go(3)); ok(await noSideScroll(page), 'read more');
+  ok(await D(page, () => [...document.querySelectorAll('.layer.is-cur button, #bar button, #zoombar button')].filter(b => b.offsetParent).every(b => { const r = b.getBoundingClientRect(); return r.height >= 24 && r.width >= 24; })), 'buttons are at least 24 px in each direction');
+  await D(page, () => { const s = ACADEMY_DEBUG.state(); s.pos.space = 'roles'; ACADEMY_DEBUG.go(0); });
+  ok(await noSideScroll(page), 'roles tree (the tree scrolls inside its own box)');
+  ok(await D(page, () => { const b = document.querySelector('.treebox'); return b.scrollWidth > b.clientWidth; }), 'the tree box itself can be swiped sideways');
+  await page.locator('#L0 [data-role="context"]').tap(); ok(await noSideScroll(page), 'a role');
+  await D(page, () => ACADEMY_DEBUG.go(3)); ok(await noSideScroll(page), 'a role, read more');
+  await D(page, () => ACADEMY_DEBUG.go(1)); ok(await noSideScroll(page), 'a roles family');
+  await page.locator('#c-review').tap(); ok(await page.locator('#review').isVisible() && await noSideScroll(page), 'review sheet');
+  await page.locator('#review [data-r="close"]').tap();
+  await page.locator('#c-menu').tap();
+  ok(await D(page, () => { const m = document.querySelector('#menu').getBoundingClientRect(); return m.left >= 0 && m.right <= innerWidth; }), 'the menu fits on screen');
+  await page.locator('#menu [data-m="sandbox"]').tap(); await page.locator('#sandbox [data-ex="3"]').tap();
+  ok(await page.locator('#sandbox #sb-alarm').isVisible() && await noSideScroll(page), 'sandbox sheet with warnings');
+  eq(page.errors, [], 'no script errors on the phone run');
+  await page.close();
+
+  // ------------------------------------------------------------------ light and dark
+  section('Light and dark: text contrast');
+  const contrast = () => {
+    const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const probe = document.createElement('div'); document.body.appendChild(probe);
+    const col = v => { probe.style.color = 'var(' + v + ')'; return getComputedStyle(probe).color; };
+    const out = {}; for (const bg of ['--bg', '--surface', '--chip']) for (const fg of ['--text', '--muted', '--ok', '--err', '--info']) out[fg + ' on ' + bg] = +cr(col(fg), col(bg)).toFixed(2);
+    out['button text'] = +cr(col('--on-accent'), col('--accent')).toFixed(2); probe.remove();
+    return { out, scheme: getComputedStyle(document.documentElement).colorScheme, bg: getComputedStyle(document.body).backgroundColor };
+  };
+  for (const scheme of ['light', 'dark']) {
+    page = await open(browser, { colorScheme: scheme });
+    const c = await D(page, contrast);
+    const low = Object.entries(c.out).filter(([k, v]) => v < 4.5);
+    eq(low, [], scheme + ' (following the system): every text colour has at least 4.5:1 contrast');
+    ok(c.scheme.includes(scheme), scheme + ': the page follows the system setting');
+    await page.close();
+  }
+  page = await open(browser, { colorScheme: 'light' });
+  await page.click('#c-menu'); await page.click('#menu [data-m="theme"]'); await page.click('#menu [data-m="theme"]');
+  let c2 = await D(page, contrast);
+  ok(await D(page, () => document.documentElement.dataset.theme === 'dark') && c2.scheme.includes('dark') && Object.values(c2.out).every(v => v >= 4.5), 'the Theme button forces dark on a light system, with good contrast');
+  ok(await D(page, () => document.activeElement.dataset.m === 'theme'), 'the Theme button keeps keyboard focus after it is pressed');
+  await page.close();
+  page = await open(browser, { colorScheme: 'dark' });
+  await page.click('#c-menu'); await page.click('#menu [data-m="theme"]');
+  c2 = await D(page, contrast);
+  ok(c2.scheme.includes('light') && Object.values(c2.out).every(v => v >= 4.5), 'the Theme button forces light on a dark system, with good contrast');
+  await page.close();
+
+  // ------------------------------------------------------------------ reduced motion and keyboard
+  section('Reduced motion');
+  page = await open(browser, { reducedMotion: 'reduce' });
+  await goLesson(page, 'models', 'tokens');
+  const rm = await D(page, () => { const dur = el => Math.max(...getComputedStyle(el).transitionDuration.split(',').map(parseFloat)); const tok = document.querySelector('.tok'); return { layer: dur(document.querySelector('.layer.is-cur')), hidden: getComputedStyle(document.querySelector('#L0')).transform, ring: dur(document.querySelector('.ring .fg')), anim: parseFloat(getComputedStyle(tok).animationDuration) }; });
+  ok(rm.layer < 0.01 && rm.ring < 0.01 && rm.anim < 0.01 && rm.hidden === 'none', 'with reduced motion on, zoom, rings and chips do not animate or scale', JSON.stringify(rm));
+  await page.close();
+  page = await open(browser);
+  ok(await D(page, () => Math.max(...getComputedStyle(document.querySelector('.layer.is-cur')).transitionDuration.split(',').map(parseFloat)) > 0.2), 'without it, the zoom is animated');
+
+  section('Keyboard only');
+  await page.keyboard.press('Tab');
+  const seen = []; for (let i = 0; i < 12; i++) { seen.push(await D(page, () => { const a = document.activeElement; return a.id || a.dataset.space || a.dataset.act || a.dataset.track || a.tagName; })); await page.keyboard.press('Tab'); }
+  ok(seen.includes('c-review') && seen.includes('c-menu') && seen.includes('roles') && seen.includes('continue') && seen.includes('models'), 'Tab reaches the top bar, the map switch, Continue and the tracks, in order', seen.join(' '));
+  ok(await D(page, () => { const a = document.activeElement, s = getComputedStyle(a); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2; }), 'the focused control has a visible outline');
+  await page.focus('#c-menu'); await page.keyboard.press('Enter');
+  ok(await page.locator('#menu').isVisible() && await D(page, () => document.querySelector('#menu').contains(document.activeElement)), 'Enter on Menu opens it and moves focus inside');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#menu').isHidden() && await D(page, () => document.activeElement.id === 'c-menu'), 'Esc closes the menu and returns focus to the Menu button');
+  await page.focus('#L0 [data-act="continue"]'); await page.keyboard.press('Enter');
+  eq(await D(page, () => [ACADEMY_DEBUG.state().pos.zoom, ACADEMY_DEBUG.state().pos.concept]), [2, 'tokens'], 'Enter on Start opens the first lesson');
+  await page.focus('#tk-in'); await page.keyboard.type('1 + 2 - 3');
+  eq(await D(page, () => [ACADEMY_DEBUG.state().pos.zoom, Object.keys(ACADEMY_DEBUG.state().cards).length, document.querySelector('#tk-in').value.endsWith('1 + 2 - 3')]), [2, 0, true], 'typing digits, + and - in a text box types; it does not answer the quiz or zoom');
+  await page.focus('#c-review'); await page.keyboard.press('Enter');
+  ok(/Nothing due/.test(await text(page, '#review')) && await D(page, () => document.querySelector('#review').contains(document.activeElement)), 'the review sheet opens with focus inside, even when nothing is due');
+  await page.keyboard.press('Enter');
+  ok(await page.locator('#review').isHidden() && await D(page, () => document.activeElement.id === 'c-review'), 'closing it returns focus to where you were');
+  await goLesson(page, 'models', 'context');
+  await page.focus('#cx-win'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
+  ok(/180 tokens/.test(await text(page, '#cx-winv')), 'sliders work with the arrow keys');
+  eq(page.errors, [], 'no script errors on the keyboard run');
+  eq(page.net, [], 'still nothing over the network');
+  await page.close();
+
+  await browser.close();
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  if (fail) { console.log('\nFailed:\n  ' + failures.join('\n  ')); process.exit(1); }
+})().catch(e => { console.error(e); process.exit(1); });

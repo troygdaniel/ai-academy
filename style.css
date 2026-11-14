@@ -1,7 +1,7 @@
 /* AI Academy: the agentboard look (tokens, light and dark, cards, rings, calm motion). System fonts, so it works offline. */
 :root {
   --bg: #fafaf9; --surface: #ffffff; --line: #e7e5e4; --text: #1c1917; --muted: #6b6560; --accent: #1c1917; --on-accent: #ffffff;
-  --run: #c2570c; --ok: #15803d; --err: #b42318; --info: #1d4ed8; --chip: #f2f0ee;
+  --run: #c2570c; --ok: #126b35; --err: #b42318; --info: #1d4ed8; --chip: #f2f0ee;
   --shadow: 0 1px 2px rgba(28,25,23,.05), 0 1px 1px rgba(28,25,23,.03);
   --shadow-hover: 0 4px 14px rgba(28,25,23,.08);
   --glow1: rgba(99,102,241,.08); --glow2: rgba(251,146,60,.09);
@@ -35,7 +35,7 @@ html, body { height: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font: var(--fs-base)/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden; overflow: clip; /* clip: the page itself can never scroll, even when focus moves */
   background-image: radial-gradient(60vw 40vh at 0% 0%, var(--glow1), transparent 70%), radial-gradient(50vw 40vh at 100% 100%, var(--glow2), transparent 70%);
   background-attachment: fixed;
 }
@@ -66,7 +66,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
 
 /* stage and the four zoom layers */
-#stage { position: relative; flex: 1; min-height: 0; }
+#stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .layer {
   position: absolute; inset: 0; overflow: auto; padding: 22px max(16px, env(safe-area-inset-left)) 110px max(16px, env(safe-area-inset-right));
   opacity: 0; visibility: hidden; pointer-events: none; transform: scale(.94);
@@ -74,7 +74,9 @@ select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid 
 }
 .layer.is-out { transform: scale(1.08); }
 .layer.is-cur { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition: opacity .38s ease, transform .38s ease, visibility 0s; }
-.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+.sheet { grid-template-columns: minmax(0, 1fr); }
+.sbgrid > *, .two > * { min-width: 0; }
 .kicker { font-size: var(--fs-xs); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; }
 .card h3 { font-size: var(--fs-lg); margin-bottom: 6px; }
@@ -260,7 +262,7 @@ table.mini td { font-variant-numeric: tabular-nums; }
 table.mini tr.on th, table.mini tr.on td { background: var(--chip); }
 .scroll { overflow-x: auto; }
 .doc { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; background: var(--bg); margin-bottom: 12px; }
-fieldset.seg { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 0; display: grid; gap: 6px; }
+fieldset.seg { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; margin: 0; display: grid; gap: 6px; }
 fieldset.seg legend { font-size: var(--fs-sm); color: var(--muted); padding: 0 6px; }
 fieldset.seg label { display: flex; gap: 8px; align-items: center; min-height: 28px; }
 .exs button.on { border-color: var(--info); background: var(--t1); }
