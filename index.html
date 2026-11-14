@@ -25,15 +25,17 @@
 </main>
 
 <nav id="zoombar" aria-label="Zoom">
-  <button class="z" id="z-out" type="button" aria-label="Zoom out" title="Zoom out ( - )">-</button>
+  <button class="z" id="z-out" type="button" aria-label="Zoom out" title="Zoom out ( - )">−</button>
   <div class="stops" id="z-stops"></div>
   <button class="z" id="z-in" type="button" aria-label="Zoom in" title="Zoom in ( + )">+</button>
   <span class="crumb" id="crumb"></span>
 </nav>
 
-<div id="review" hidden></div>
+<div id="review" role="dialog" aria-modal="true" aria-labelledby="rv-title" hidden></div>
+<div id="sandbox" role="dialog" aria-modal="true" aria-labelledby="sb-title" hidden></div>
 
 <script src="content.js"></script>
+<script src="widgets.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
