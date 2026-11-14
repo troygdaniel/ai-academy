@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Academy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="bar">
+  <div class="brand"><i></i>AI Academy</div>
+  <span class="chip hot" id="c-streak" title="Days in a row with some study"></span>
+  <span class="chip" id="c-level" title="XP: 100 per level"></span>
+  <span class="chip" id="c-goal" title="Minutes studied today against your daily goal"></span>
+  <button class="chip btn" id="c-review" type="button"></button>
+  <button class="chip btn" id="c-menu" type="button" aria-haspopup="true" aria-expanded="false">Menu</button>
+</header>
+<div class="pop" id="menu" hidden></div>
+
+<main id="stage">
+  <section class="layer" id="L0" aria-label="Map"></section>
+  <section class="layer" id="L1" aria-label="Track"></section>
+  <section class="layer" id="L2" aria-label="Concept"></section>
+  <section class="layer" id="L3" aria-label="Detail"></section>
+</main>
+
+<nav id="zoombar" aria-label="Zoom">
+  <button class="z" id="z-out" type="button" aria-label="Zoom out" title="Zoom out ( - )">-</button>
+  <div class="stops" id="z-stops"></div>
+  <button class="z" id="z-in" type="button" aria-label="Zoom in" title="Zoom in ( + )">+</button>
+  <span class="crumb" id="crumb"></span>
+</nav>
+
+<div id="review" hidden></div>
+
+<script src="content.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
