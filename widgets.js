@@ -295,7 +295,7 @@ var WIDGETS = {};
     root.innerHTML = '<label class="lab" for="sb-text">Your prompt</label><textarea class="wtext tall" id="sb-text" maxlength="4000" spellcheck="false" placeholder="Write or paste a prompt. Use made-up data."></textarea>' + exButtons(L.examples) +
       '<div class="sbgrid"><div><h4 id="sb-score"></h4><div id="sb-rubric"></div></div><div><h4>Real data check</h4><div id="sb-warn" role="status"></div>' +
       '<label class="lab" for="sb-names">Names to watch for (people, clients, projects), separated by commas</label><input type="text" id="sb-names" autocomplete="off" spellcheck="false" placeholder="for example: Heron, Jo Sample"><p class="note">Kept in this browser only, and left out of the Save file.</p></div></div>' +
-      (L.full ? '<p class="note">This sandbox never calls a model. It scores the prompt by pattern matching, in your browser. A high score means the parts seem to be present, not that the prompt is right. What you type is not saved.</p>' : '<div class="row"><button type="button" class="btn" data-a="full">Open the full sandbox</button></div>');
+      (L.full ? '<p class="note">This sandbox never calls a model. It scores the prompt by pattern matching, in your browser. A high score means the parts seem to be present, not that the prompt is right. The prompt is not saved. The names you list are kept in this browser only, and are left out of the Save file.</p>' : '<div class="row"><button type="button" class="btn" data-a="full">Open the full sandbox</button></div>');
     function update() {
       var sc = scorePrompt(st.text), w = scanData(st.text, names), h;
       $('#sb-score', root).textContent = 'Rubric: ' + sc.n + ' of 6 parts found';

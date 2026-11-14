@@ -425,7 +425,7 @@ var ACADEMY = {
   // job titles (see credit); none of his titles list, dates or text is copied. Rows run from earlier to later and are approximate.
   // forecast:true marks a node that is opinion about the future, not fact. you:true marks the three roles the reader holds.
   roles: {
-    blurb: 'How the jobs around software and AI grew out of one another, and where the delivery roles sit. Tap a role to zoom in. Order runs from earlier to later and is approximate; there are no dates on purpose.',
+    blurb: 'How the jobs around software and AI grew out of one another, and where the delivery roles sit. Tap a role to zoom in. Order runs from earlier to later and is approximate; there is no timeline on purpose. A few role pages quote a dated fact from their own source.',
     credit: 'Inspired by Ian Miell\'s <a href="https://ianmiell.github.io/sw-job-title-family-tree/" target="_blank" rel="noopener noreferrer">family tree of software job titles</a>. The idea of a clickable tree with "grew out of" and "influence" arrows is his. The roles chosen, the wording, the order and the opinions here are ours; none of his titles list, dates or text is copied.',
     rows: 7,
     families: [

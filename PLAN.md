@@ -45,5 +45,5 @@ Open `index.html`. Tracks 1 and 2 are complete (11 lessons, each with a picture 
 ## Decisions taken while building (simplest option each time)
 1. The Map stays the home screen; the roles tree is a second map behind a switch at the top.
 2. Tone: plain, with a light touch of playful.
-3. The roles tree has no dates, only an earlier-to-later order, so nothing of Ian Miell's dates could be echoed and nothing unsourced is implied.
+3. The roles tree has no timeline, only an earlier-to-later order, and the few dated facts on role pages come from their own sources (R2 to R10), so none of Ian Miell's dates are echoed and nothing unsourced is implied.
 4. Track 2 has six lessons (a "roles" lesson was added to the five outlined).
