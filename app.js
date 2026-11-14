@@ -293,7 +293,7 @@
     var n = streak(), lvl = 1 + Math.floor(S.xp / 100), min = Math.floor(today().min), goal = S.goal, due = dueIds().length;
     $('#c-streak').innerHTML = n ? '<b>' + n + '</b> day streak' : 'No streak yet';
     $('#c-level').innerHTML = ring((S.xp % 100) / 100, 22, 'lvl') + 'Level <b>' + lvl + '</b>';
-    $('#c-goal').innerHTML = ring(Math.min(1, today().min / goal), 22, 'goal') + '<b>' + min + '</b> / ' + goal + ' min<span class="wide"> today</span>';
+    $('#c-goal').innerHTML = ring(Math.min(1, today().min / goal), 22, 'goal') + '<b>' + min + '</b> / ' + goal + ' min<span class="hide-sm"> today</span>';
     $('#c-review').innerHTML = 'Review' + (due ? ' <span class="badge">' + due + '</span>' : '');
   }
   var resetArmed = false, menuMsg = '';

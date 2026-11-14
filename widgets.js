@@ -234,4 +234,189 @@ var WIDGETS = {};
     });
     update();
   };
+
+  // ---------- the prompt rubric and the real-data check (used by the sandbox and by two lessons) ----------
+  // Plain pattern matching. It finds whether a part seems to be present, never whether it is good. No model, no network.
+  var RUBRIC = [
+    { id: 'role', label: 'Role', hint: 'Say who the model should be: "You are a ... writing for ...".',
+      re: /\b(you are|you're|act as|acting as|take the role|in the role of|your role|as an? (?:experienced |senior |expert |sceptical |skeptical |careful )?[a-z]+ (?:coach|manager|engineer|reviewer|analyst|editor|writer|tester|developer|master|owner|teacher|lead))\b/i },
+    { id: 'task', label: 'Task', hint: 'Start a sentence with one clear verb: summarise, list, draft, compare, review.',
+      re: /(?:^|[.!?:\n]\s*|\bplease\s+|\byour task is to\s+|\bi need you to\s+|\bthen\s+)(write|draft|summari[sz]e|list|explain|review|compare|classify|extract|rewrite|translate|create|generate|analy[sz]e|plan|suggest|identify|describe|check|find|turn|convert|give|propose|outline|rank|sort|group|estimate|critique|answer|label|tag|produce)\b/i },
+    { id: 'context', label: 'Context', hint: 'Say who it is for and why: "This is for ... because ...".',
+      re: /\b(context|background|audience|the reader|situation|because|so that|the goal|purpose|we are|our team|this is for|it is for|is for an?|for an? [a-z]+ who|who (?:missed|was not|were not|has not|have not))\b/i },
+    { id: 'format', label: 'Format', hint: 'Name the shape: bullets, a table with these columns, JSON with these keys, a template.',
+      re: /\b(table|bullets?|bullet points?|numbered list|list of|json|markdown|headings?|columns?|paragraphs?|format|template|csv|sections?|one line|one sentence)\b/i },
+    { id: 'constraints', label: 'Constraints', hint: 'Add limits and what to do when unsure: "under 80 words", "do not ...", "if it is not in the notes, say so".',
+      re: /\b(no more than|at most|at least|under \d+|fewer than|maximum|limit|only|do not|don't|never|avoid|must|exactly|keep it|\d+\s+(?:words?|sentences?|bullets?|lines?|items?|points?|paragraphs?)|if you (?:are not sure|do not know|don't know)|say so|plain (?:english|language))\b/i },
+    { id: 'example', label: 'Example', hint: 'Show one or two samples of what good looks like.',
+      re: /\b(for example|e\.g\.|examples?\b[^.\n]{0,24}:|like this|such as|here is (?:an|one) example)|<examples?>|\binput:[\s\S]*\boutput:/i }
+  ];
+  function scorePrompt(text) {
+    var parts = RUBRIC.map(function (r) { var m = r.re.exec(text); return { id: r.id, label: r.label, ok: !!m, found: m ? m[0].replace(/^[\s.!?:]+/, '').trim() : '', hint: r.hint }; });
+    return { parts: parts, n: parts.filter(function (p) { return p.ok; }).length, words: (text.trim().match(/\S+/g) || []).length };
+  }
+  var NOT_NAMES = ('Scrum Master Agile Coach Product Owner Project Manager Team Sprint Review Retrospective Planning Definition Done Ready Daily Standup Kanban Board Release Train User Story Stories Acceptance Criteria Help Needed Changes Context Format Example Constraints Role Task Monday Tuesday Wednesday Thursday Friday Saturday Sunday January February March April May June July August September October November December The This That These Those You Your Please Summarise Summarize Write Draft List Keep Use Give Not Do If It We Our An And For With Then When Each North South East West New Chief Senior Junior Vice President Head Director Service Desk Change Request Risk Register Steering Committee Business Sponsor Quality Assurance Machine Learning Artificial Intelligence Large Language Model Models Mr Mrs Ms Miss Mx Dr Prof').split(' ');
+  var STOP = {}; NOT_NAMES.forEach(function (w) { STOP[w] = 1; });
+  function scanData(text, names) {
+    var out = [], seen = {}, m, re;
+    function add(kind, match, msg) { var k = kind + '|' + match.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push({ kind: kind, match: match, msg: msg }); } }
+    re = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g; while ((m = re.exec(text))) add('email', m[0], 'looks like an email address');
+    re = /\d(?:[ -]?\d){6,}/g; while ((m = re.exec(text))) add('digits', m[0], 'a long run of digits: an account, card, phone or ID number?');
+    (names || []).forEach(function (n) {
+      n = n.trim(); if (n.length < 2) return;
+      var r = new RegExp('(^|[^A-Za-z])(' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![A-Za-z])', 'i'), mm = r.exec(text);
+      if (mm) add('listed', mm[2], 'a name on your watch list');
+    });
+    re = /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g; while ((m = re.exec(text))) add('name', m[0], 'a title and a name');
+    re = /\b([A-Z][a-z]{1,})\s+([A-Z][a-z]{1,})\b/g;
+    while ((m = re.exec(text))) {
+      var before = text.slice(0, m.index).replace(/[\s"'(\[]+$/, ''), startOfSentence = before === '' || /[.!?:\n]$/.test(before) || /\n\s*$/.test(text.slice(0, m.index));
+      var third = /^\s+[A-Z][a-z]+/.test(text.slice(m.index + m[0].length));
+      if (startOfSentence && third && !STOP[m[2]]) { re.lastIndex = m.index + m[1].length; continue; } // "Ask Priya Natarajan": the first word is only capitalised because it starts the sentence
+      if (STOP[m[1]] && STOP[m[2]]) continue;                       // "Scrum Master", "Help Needed"
+      if (startOfSentence && (STOP[m[1]] || STOP[m[2]])) { re.lastIndex = m.index + m[1].length; continue; } // "Summarise Monday ..." is not a name
+      if (STOP[m[2]]) continue;                                     // "Heron Team"
+      if (STOP[m[1]]) { re.lastIndex = m.index + m[1].length; continue; } // "The Jo Sample": try again from the second word
+      add('maybe', m[0], 'two capitalised words: might be a person or a company');
+    }
+    return out;
+  }
+  WIDGETS._score = scorePrompt; WIDGETS._scan = scanData;
+  function rubricHtml(sc, compact) {
+    var h = '<ul class="rubric">';
+    sc.parts.forEach(function (p) { h += '<li class="' + (p.ok ? 'ok' : 'no') + '"><b>' + (p.ok ? '✓' : '○') + ' ' + p.label + '</b>' + (compact ? '' : '<span>' + (p.ok ? 'found: "' + esc(p.found.slice(0, 40)) + '"' : esc(p.hint)) + '</span>') + '</li>'; });
+    return h + '</ul>';
+  }
+
+  // opts.full: the big sandbox sheet (adds the names watch list). In a lesson it is the same thing, smaller.
+  WIDGETS.sandbox = function (root, L, api) {
+    var st = L.full ? { text: L.text !== undefined ? L.text : '' } : mem('sandbox', { text: L.examples[0].text });
+    var names = api && api.names ? api.names() : [];
+    root.innerHTML = '<label class="lab" for="sb-text">Your prompt</label><textarea class="wtext tall" id="sb-text" maxlength="4000" spellcheck="false" placeholder="Write or paste a prompt. Use made-up data."></textarea>' + exButtons(L.examples) +
+      '<div class="sbgrid"><div><h4 id="sb-score"></h4><div id="sb-rubric"></div></div><div><h4>Real data check</h4><div id="sb-warn" role="status"></div>' +
+      '<label class="lab" for="sb-names">Names to watch for (people, clients, projects), separated by commas</label><input type="text" id="sb-names" autocomplete="off" spellcheck="false" placeholder="for example: Heron, Jo Sample"><p class="note">Kept in this browser only, and left out of the Save file.</p></div></div>' +
+      (L.full ? '<p class="note">This sandbox never calls a model. It scores the prompt by pattern matching, in your browser. A high score means the parts seem to be present, not that the prompt is right. What you type is not saved.</p>' : '<div class="row"><button type="button" class="btn" data-a="full">Open the full sandbox</button></div>');
+    function update() {
+      var sc = scorePrompt(st.text), w = scanData(st.text, names), h;
+      $('#sb-score', root).textContent = 'Rubric: ' + sc.n + ' of 6 parts found';
+      $('#sb-rubric', root).innerHTML = rubricHtml(sc) + (sc.words && sc.words < 6 ? '<p class="note">Very short. Fine for a tiny job; otherwise the model will fill the gaps with guesses.</p>' : '');
+      if (!st.text.trim()) h = '<p class="muted" style="margin:0">Nothing to check yet.</p>';
+      else if (!w.length) h = '<p class="verdict ok">No obvious real data found. This is a simple pattern check, so still read it through yourself.</p>';
+      else { h = '<p class="verdict bad" id="sb-alarm">' + w.length + (w.length === 1 ? ' thing looks' : ' things look') + ' like real data. Replace with made-up values before using this prompt anywhere.</p><ul class="warns">'; w.forEach(function (x) { h += '<li><code>' + esc(x.match) + '</code> ' + esc(x.msg) + '</li>'; }); h += '</ul>'; }
+      $('#sb-warn', root).innerHTML = h;
+    }
+    $('#sb-text', root).value = st.text; $('#sb-names', root).value = names.join(', ');
+    root.addEventListener('input', function (e) {
+      if (e.target.id === 'sb-text') st.text = e.target.value;
+      else if (e.target.id === 'sb-names') { names = e.target.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); if (api && api.setNames) api.setNames(names); }
+      else return;
+      update();
+    });
+    onClick(root, function (d) {
+      if (d.ex) { st.text = L.examples[+d.ex].text; $('#sb-text', root).value = st.text; update(); }
+      else if (d.a === 'full' && api && api.open) api.open(st.text);
+    });
+    update();
+  };
+
+  // ---------- The parts of a prompt: switch parts on and off ----------
+  WIDGETS.parts = function (root, L, api) {
+    var st = mem('parts', { on: { task: true } });
+    root.innerHTML = '<div class="toggles" id="pt-toggles"></div><pre class="pre" id="pt-prompt" aria-live="polite"></pre><h4 id="pt-score"></h4><div id="pt-rubric"></div><ul class="warns" id="pt-miss"></ul><div class="row"><button type="button" class="btn" data-a="full">Open this prompt in the sandbox</button></div>';
+    function text() { return L.parts.filter(function (p) { return st.on[p.id]; }).map(function (p) { return p.text; }).concat([L.material]).join('\n\n'); }
+    function update() {
+      $('#pt-toggles', root).innerHTML = L.parts.map(function (p) { return '<label class="check"><input type="checkbox" data-part="' + p.id + '"' + (st.on[p.id] ? ' checked' : '') + '> ' + esc(p.label) + '</label>'; }).join('');
+      var t = text(), sc = scorePrompt(t);
+      $('#pt-prompt', root).textContent = t;
+      $('#pt-score', root).textContent = 'Rubric: ' + sc.n + ' of 6 parts found';
+      $('#pt-rubric', root).innerHTML = rubricHtml(sc, true);
+      $('#pt-miss', root).innerHTML = L.parts.filter(function (p) { return !st.on[p.id]; }).map(function (p) { return '<li>' + esc(p.without) + '</li>'; }).join('') || '<li>All six parts are in. Now it is a brief.</li>';
+    }
+    root.addEventListener('change', function (e) { var id = e.target.dataset.part; if (id) { st.on[id] = e.target.checked; update(); var again = $('[data-part="' + id + '"]', root); if (again) again.focus(); } });
+    onClick(root, function (d) { if (d.a === 'full' && api && api.open) api.open(text()); });
+    update();
+  };
+
+  // ---------- Show, do not tell: adjectives versus examples ----------
+  WIDGETS.narrow = function (root, L) {
+    var st = mem('narrow', { tell: {}, show: {} });
+    root.innerHTML = '<p class="prompt" style="font-size:16px">' + esc(L.task) + '</p><div class="sbgrid"><fieldset class="seg"><legend>Tell: add adjectives</legend><div id="nw-tells"></div></fieldset><fieldset class="seg"><legend>Show: add examples</legend><div id="nw-shows"></div></fieldset></div>' +
+      '<h4 id="nw-count" role="status" style="margin:14px 0 6px"></h4><ul class="cands" id="nw-cands"></ul><p class="note" id="nw-note"></p>';
+    function update() {
+      var dead = {}, why = {}, nShow = 0;
+      L.tells.forEach(function (t, i) { if (st.tell[i]) t.kills.forEach(function (k) { dead[k] = 1; why[k] = why[k] || t.label; }); });
+      L.shows.forEach(function (s, i) { if (st.show[i]) { nShow++; s.kills.forEach(function (k) { dead[k] = 1; why[k] = s.label; }); } });
+      if (nShow === L.shows.length) L.bothKill.forEach(function (k) { dead[k] = 1; why[k] = 'the two examples together'; });
+      $('#nw-tells', root).innerHTML = L.tells.map(function (t, i) { return '<label><input type="checkbox" data-tell="' + i + '"' + (st.tell[i] ? ' checked' : '') + '> ' + esc(t.label) + '</label>'; }).join('');
+      $('#nw-shows', root).innerHTML = L.shows.map(function (s, i) { return '<label><input type="checkbox" data-show="' + i + '"' + (st.show[i] ? ' checked' : '') + '> <span><b>' + esc(s.label) + '</b><br><span class="muted" style="font-size:13px">' + esc(s.text) + '</span></span></label>'; }).join('');
+      var left = L.cands.filter(function (c) { return !dead[c.id]; }).length;
+      $('#nw-count', root).textContent = left + ' of ' + L.cands.length + (left === 1 ? ' readings still fits' : ' readings still fit');
+      $('#nw-cands', root).innerHTML = L.cands.map(function (c) { return '<li class="' + (dead[c.id] ? 'out' : '') + '"><span>' + esc(c.text) + '</span>' + (dead[c.id] ? '<small>ruled out by ' + esc(why[c.id]) + '</small>' : '') + '</li>'; }).join('');
+      $('#nw-note', root).textContent = left === 1 ? 'One reading left. Two varied examples did what three adjectives could not.' : nShow === 1 ? 'One example fixed the layout. But is "(medium)" part of the pattern, or just what that one ticket happened to be? The model cannot tell. Add the second example.' : nShow === 0 && left < L.cands.length ? 'Adjectives trimmed a little. Most readings are still "short" and "professional".' : nShow === 0 ? 'Every one of these is a fair reading of the request.' : '';
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset, sel;
+      if (d.tell !== undefined) { st.tell[d.tell] = e.target.checked; sel = '[data-tell="' + d.tell + '"]'; } else if (d.show !== undefined) { st.show[d.show] = e.target.checked; sel = '[data-show="' + d.show + '"]'; } else return;
+      update(); $(sel, root).focus();
+    });
+    update();
+  };
+
+  // ---------- Give it a role: one question, four voices ----------
+  WIDGETS.rolepick = function (root, L) {
+    var st = mem('rolepick', { i: 0 });
+    root.innerHTML = '<div class="exs" id="rp-tabs"></div><div class="chat" aria-live="polite" id="rp-chat"></div><p class="note" id="rp-shift"></p><p class="note">Look at what did not change: the idea of a shortcut now and a cost later is the same in all four. The role moved the voice, not the facts.</p>';
+    function update() {
+      var v = L.variants[st.i];
+      $('#rp-tabs', root).innerHTML = L.variants.map(function (x, i) { return '<button type="button" data-v="' + i + '"' + (i === st.i ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(x.label) + '</button>'; }).join('');
+      $('#rp-chat', root).innerHTML = '<div class="msg you"><span class="who">Prompt</span>' + (st.i ? esc(v.who) + ' ' : '') + esc(L.question) + '</div><div class="msg model"><span class="who">Answer (written by hand)</span>' + esc(v.text) + '</div>';
+      $('#rp-shift', root).textContent = 'What the role did: ' + v.shift;
+    }
+    onClick(root, function (d) { if (d.v) { st.i = +d.v; update(); $('[data-v="' + st.i + '"]', root).focus(); } });
+    update();
+  };
+
+  // ---------- Ask for a format: same content, five shapes ----------
+  WIDGETS.formatpick = function (root, L) {
+    var st = mem('formatpick', { i: 0 });
+    root.innerHTML = '<div class="exs" id="fp-tabs"></div><p class="prompt" style="font-size:15px" id="fp-ask"></p><div id="fp-out" aria-live="polite"></div><ul class="rubric" id="fp-checks"></ul>';
+    function update() {
+      var f = L.formats[st.i], out, parsed = null, err = '';
+      $('#fp-tabs', root).innerHTML = L.formats.map(function (x, i) { return '<button type="button" data-f="' + i + '"' + (i === st.i ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(x.label) + '</button>'; }).join('');
+      $('#fp-ask', root).textContent = 'You ask: ' + f.ask;
+      if (f.table) { out = '<div class="scroll"><table class="mini"><thead><tr>' + f.table[0].map(function (c) { return '<th scope="col">' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + f.table.slice(1).map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>'; }
+      else out = '<pre class="pre">' + esc(f.out) + '</pre>';
+      $('#fp-out', root).innerHTML = out;
+      if (!f.table) { try { parsed = JSON.parse(f.out); } catch (e) { err = e.message; } }
+      var isJson = /^json/.test(f.id), ok = parsed !== null;
+      $('#fp-checks', root).innerHTML = [[f.skim, 'A person can skim it in five seconds'], [f.compare, 'A person can compare the risks side by side'], [ok, 'A program can read it' + (ok ? ': parsed ' + parsed.length + ' items' : isJson ? ': the parser stopped (' + esc(err.slice(0, 60)) + ')' : '')]]
+        .map(function (c) { return '<li class="' + (c[0] ? 'ok' : 'no') + '"><b>' + (c[0] ? '✓' : '✗') + '</b><span>' + c[1] + '</span></li>'; }).join('');
+    }
+    onClick(root, function (d) { if (d.f) { st.i = +d.f; update(); $('[data-f="' + st.i + '"]', root).focus(); } });
+    update();
+  };
+
+  // ---------- Iterate like a sprint: one change, rerun the test cases ----------
+  WIDGETS.iterate = function (root, L) {
+    var st = mem('iterate', { on: {}, log: [] });
+    function passes(on) { return L.cases.map(function (c) { var broke = c.breaks.some(function (b) { return on[b]; }); return { ok: !broke && c.need.every(function (n) { return on[n]; }), broke: broke }; }); }
+    function count(on) { return passes(on).filter(function (p) { return p.ok; }).length; }
+    root.innerHTML = '<fieldset class="seg"><legend>Changes you can make</legend><div id="it-fixes"></div></fieldset><pre class="pre" id="it-prompt"></pre><h4 id="it-count" role="status" style="margin:12px 0 6px"></h4><ul class="rubric" id="it-cases"></ul><ol class="log" id="it-log" aria-label="Version history"></ol>';
+    function update() {
+      $('#it-fixes', root).innerHTML = L.fixes.map(function (f) { return '<label><input type="checkbox" data-fix="' + f.id + '"' + (st.on[f.id] ? ' checked' : '') + '> ' + esc(f.label) + '</label>'; }).join('');
+      $('#it-prompt', root).textContent = [L.base].concat(L.fixes.filter(function (f) { return st.on[f.id]; }).map(function (f) { return f.add; })).join(' ');
+      var ps = passes(st.on), n = count(st.on);
+      $('#it-count', root).textContent = 'Version ' + (st.log.length + 1) + ': ' + n + ' of ' + L.cases.length + ' test cases pass';
+      $('#it-cases', root).innerHTML = L.cases.map(function (c, i) { return '<li class="' + (ps[i].ok ? 'ok' : 'no') + '"><b>' + (ps[i].ok ? '✓' : '✗') + '</b><span>' + esc(c.label) + (ps[i].broke ? ' <em>' + esc(c.broke) + '</em>' : '') + '</span></li>'; }).join('');
+      $('#it-log', root).innerHTML = st.log.slice(-6).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('');
+    }
+    root.addEventListener('change', function (e) {
+      var id = e.target.dataset.fix; if (!id) return;
+      var before = count(st.on), f = L.fixes.filter(function (x) { return x.id === id; })[0]; st.on[id] = e.target.checked;
+      var after = count(st.on);
+      st.log.push('v' + (st.log.length + 2) + ': ' + (e.target.checked ? 'added' : 'removed') + ' "' + f.label + '": ' + before + ' → ' + after + ' passing' + (after < before ? '. A regression: roll it back.' : after > before ? '. Keep it.' : '. No change.'));
+      update(); $('[data-fix="' + id + '"]', root).focus();
+    });
+    update();
+  };
 })();
