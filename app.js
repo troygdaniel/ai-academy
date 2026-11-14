@@ -194,20 +194,22 @@
   // ---------- the roles family tree: the same four stops ----------
   var famFilter = '';
   function renderTree() {
-    var CW = 196, RH = 86, NW = 172, NH = 56, GX = 44, GY = 34, W = GX + RO.families.length * CW + 8, H = GY + RO.rows * RH + 6;
+    var CW = 196, RH = 86, NW = 172, NH = 56, GX = 34, GY = 46, W = GX + RO.families.length * CW + 8, H = GY + RO.rows * RH + 6;
     function pos(n) { return { x: GX + RO.families.indexOf(famOf(n.fam)) * CW + (CW - NW) / 2, y: GY + n.row * RH + (RH - NH) / 2 }; }
     var svg = '<svg class="edges" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">';
     RO.edges.forEach(function (e) {
       var a = roleOf(e[0]), b = roleOf(e[1]), p = pos(a), q = pos(b), x1 = p.x + NW / 2, y1 = p.y + NH, x2 = q.x + NW / 2, y2 = q.y, my = (y1 + y2) / 2;
       var dim = famFilter && a.fam !== famFilter && b.fam !== famFilter;
-      svg += '<path class="' + (e[2] === 'grew' ? 'grew' : 'move') + (dim ? ' dim' : '') + '" d="M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + my + ' ' + x2 + ' ' + my + ' ' + x2 + ' ' + y2 + '"/>';
+      var d = 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + my + ' ' + x2 + ' ' + my + ' ' + x2 + ' ' + y2;
+      if (a.fam === b.fam && b.row - a.row > 1) { var sx = p.x + NW, bow = sx + 20, ya = p.y + NH / 2, yb = q.y + NH / 2; d = 'M' + sx + ' ' + ya + ' C' + bow + ' ' + ya + ' ' + bow + ' ' + yb + ' ' + sx + ' ' + yb; } // a long hop in one lane bows out to the side, so it does not hide behind the roles between
+      svg += '<path class="' + (e[2] === 'grew' ? 'grew' : 'move') + (dim ? ' dim' : '') + '" d="' + d + '"/>';
     });
     svg += '</svg>';
     var nodes = '';
     RO.families.forEach(function (f, i) { nodes += '<button type="button" class="lane' + (famFilter && famFilter !== f.id ? ' dim' : '') + '" data-fam="' + f.id + '" style="left:' + (GX + i * CW + (CW - NW) / 2) + 'px;width:' + NW + 'px" title="Zoom in to this family">' + esc(f.title) + '</button>'; });
     RO.nodes.forEach(function (n) {
       var p = pos(n);
-      nodes += '<button type="button" class="rnode' + (n.forecast ? ' fc' : '') + (n.you ? ' you' : '') + (S.pos.role === n.id ? ' here' : '') + (famFilter && famFilter !== n.fam ? ' dim' : '') + '" data-role="' + n.id + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + NW + 'px;height:' + NH + 'px">' + esc(n.title) + (n.forecast ? '<small>forecast</small>' : n.you ? '<small>you are here</small>' : '') + '</button>';
+      nodes += '<button type="button" class="rnode' + (n.forecast ? ' fc' : '') + (n.you ? ' you' : '') + (S.pos.role === n.id ? ' here' : '') + (famFilter && famFilter !== n.fam ? ' dim' : '') + '" data-role="' + n.id + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + NW + 'px;height:' + NH + 'px">' + esc(n.title) + (n.forecast ? '<small>forecast</small>' : n.you ? '<small>your role</small>' : '') + '</button>';
     });
     var chips = '<button type="button" data-filter=""' + (famFilter ? '' : ' class="on"') + ' aria-pressed="' + !famFilter + '">All</button>';
     RO.families.forEach(function (f) { chips += '<button type="button" data-filter="' + f.id + '"' + (famFilter === f.id ? ' class="on"' : '') + ' aria-pressed="' + (famFilter === f.id) + '">' + esc(f.title) + '</button>'; });

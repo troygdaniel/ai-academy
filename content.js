@@ -68,7 +68,15 @@ var ACADEMY = {
     { id: 'S17', title: 'OpenAI docs: Structured outputs', url: 'https://developers.openai.com/api/docs/guides/structured-outputs', note: 'JSON mode gives valid JSON; structured outputs also hold the answer to a supplied schema.' },
     { id: 'S18', title: 'Anthropic docs: Define success criteria and build evaluations', url: 'https://platform.claude.com/docs/en/test-and-evaluate/define-success', note: 'Define specific, measurable success criteria and build tests before iterating on a prompt.' },
     { id: 'S19', title: 'OWASP Top 10 for LLM Applications 2025: LLM02 Sensitive Information Disclosure', url: 'https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/', note: 'Sensitive information disclosure as a listed risk for applications built on language models.' },
-/*SOURCES*/
+    { id: 'R2', title: 'Google: Site Reliability Engineering, Introduction (Ben Treynor Sloss)', url: 'https://sre.google/sre-book/introduction/', note: 'SRE as what happens when you ask a software engineer to design an operations team.' },
+    { id: 'R3', title: 'devopsdays.org: Patrick Debois, speaker biography', url: 'https://devopsdays.org/events/2019-ghent/speakers/patrick-debois/', note: 'Says he organised the first devopsdays in 2009. The 2009 event page itself was not found.' },
+    { id: 'R4', title: 'CNCF TAG App Delivery (2023): Platforms White Paper', url: 'https://tag-app-delivery.cncf.io/whitepapers/platforms/', note: 'Quotes Evan Bottcher\'s definition of a platform as a foundation of self-service capabilities arranged as an internal product.' },
+    { id: 'R5', title: 'Sculley and others (2015): Hidden Technical Debt in Machine Learning Systems', url: 'https://proceedings.neurips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf', note: 'On the maintenance cost of real ML systems. The "small fraction is ML code" point is widely attributed to it but was not confirmed here.' },
+    { id: 'R6', title: 'Davenport and Patil (2012): Data Scientist: The Sexiest Job of the 21st Century, Harvard Business Review', url: 'https://hbr.org/2012/10/data-scientist-the-sexiest-job-of-the-21st-century', note: 'The article that made the title widely known.' },
+    { id: 'R7', title: 'Shawn Wang (2023): The Rise of the AI Engineer, Latent Space', url: 'https://www.latent.space/p/ai-engineer', note: 'The essay the title is usually traced to. Not opened; the link is from memory.' },
+    { id: 'R8', title: 'Anthropic Engineering (2025): Effective context engineering for AI agents', url: 'https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents', note: 'Context engineering as curating and maintaining the optimal set of tokens during inference; the natural progression of prompt engineering.' },
+    { id: 'R9', title: 'Schwaber and Sutherland (2020): The Scrum Guide', url: 'https://scrumguides.org/scrum-guide.html', note: 'The Scrum Master is accountable for establishing Scrum and for the Scrum Team\'s effectiveness.' },
+    { id: 'R10', title: 'Agile Manifesto: History', url: 'https://agilemanifesto.org/history.html', note: 'Seventeen people met at Snowbird, Utah, on 11 to 13 February 2001.' }
   ],
 
   lessons: {
@@ -410,7 +418,152 @@ var ACADEMY = {
         { id: 'judge.q3', q: 'You are about to paste a customer email, with name and account number, into an AI tool to get a summary. First move?', opts: ['Paste it; summaries are harmless', 'Check whether that tool is approved for that data; if unsure, remove or replace the identifying details', 'Paste it but ask the model to forget it', 'Paste half of it'], a: 1, why: 'What you send may be stored or processed outside your control. Asking a model to forget does not undo sending.' },
         { id: 'judge.q4', q: 'The prompt is good and the answer reads well. What is left to do?', opts: ['Nothing', 'Check the facts in the answer against a source', 'Ask the model whether it is sure', 'Make the prompt longer'], a: 1, why: 'A good prompt improves the odds. Fluent is still not verified.' }
       ]
-    },
-/*LESSONS*/
+    }
+  },
+
+  // The roles family tree. Our own small tree, in our own words. The interaction is inspired by Ian Miell's family tree of software
+  // job titles (see credit); none of his titles list, dates or text is copied. Rows run from earlier to later and are approximate.
+  // forecast:true marks a node that is opinion about the future, not fact. you:true marks the three roles the reader holds.
+  roles: {
+    blurb: 'How the jobs around software and AI grew out of one another, and where the delivery roles sit. Tap a role to zoom in. Order runs from earlier to later and is approximate; there are no dates on purpose.',
+    credit: 'Inspired by Ian Miell\'s <a href="https://ianmiell.github.io/sw-job-title-family-tree/" target="_blank" rel="noopener noreferrer">family tree of software job titles</a>. The idea of a clickable tree with "grew out of" and "influence" arrows is his. The roles chosen, the wording, the order and the opinions here are ours; none of his titles list, dates or text is copied.',
+    rows: 7,
+    families: [
+      { id: 'delivery', title: 'Delivery and agile', blurb: 'The people who help work flow: planning it, unblocking it, and improving how teams work. This is your branch.', quiz: [
+        { id: 'roles.delivery.q1', q: 'According to the Scrum Guide, what is the Scrum Master accountable for?', opts: ['Writing the code', 'Establishing Scrum and the Scrum Team\'s effectiveness', 'Approving the budget', 'Assigning tasks to each developer'], a: 1, why: 'The 2020 Scrum Guide gives the Scrum Master those two accountabilities. It is a serving role, not a task-assigning one.' },
+        { id: 'roles.delivery.q2', q: 'On this tree, "Delivery lead for human and agent teams" is marked as a forecast. What does that mean?', opts: ['It is an established job with a standard definition', 'It is the author\'s opinion about where things may go, not a fact', 'It comes from the Scrum Guide', 'It has already replaced the Project Manager'], a: 1, why: 'Forecast nodes are opinion and are labelled so. Treat them as a prompt for your own thinking.' },
+        { id: 'roles.delivery.q3', q: 'This tree argues that one part of delivery work is least likely to be handed to a model. Which?', opts: ['Drafting status notes', 'Summarising meetings', 'Answering for outcomes, and building trust between people', 'Turning notes into a plan'], a: 2, why: 'Drafting and summarising are text work a model can speed up. Accountability and trust sit with people. (An argument, not a proven fact.)' }
+      ] },
+      { id: 'ops', title: 'Operations and platform', blurb: 'Keeping software running, then making it easy for other teams to run theirs.', quiz: [
+        { id: 'roles.ops.q1', q: 'Google\'s SRE book describes site reliability engineering as what happens when you ask whom to design an operations team?', opts: ['A project manager', 'A software engineer', 'A database administrator', 'A hardware vendor'], a: 1, why: 'The line is Ben Treynor Sloss\'s, from the book\'s introduction: operations treated as a software problem.' },
+        { id: 'roles.ops.q2', q: 'How did DevOps begin?', opts: ['As a vendor product', 'As a movement to bring development and operations closer, which later became a job title', 'As a programming language', 'As a certification'], a: 1, why: 'It started as a way of working, with community events from 2009. The job title came after.' },
+        { id: 'roles.ops.q3', q: 'What does a platform team build?', opts: ['Customer-facing features', 'A shared internal product that other teams serve themselves from', 'Sales forecasts', 'Hardware'], a: 1, why: 'The platform is treated as a product whose users are the organisation\'s own teams.' }
+      ] },
+      { id: 'data', title: 'Data and machine learning', blurb: 'From analysing data, to building models, to keeping models running in production.', quiz: [
+        { id: 'roles.data.q1', q: 'On this tree, what mainly separates an ML engineer from a data scientist?', opts: ['The ML engineer puts models into production software; the data scientist explores data to answer questions', 'Nothing: they are the same job', 'The data scientist manages servers', 'The ML engineer does not write code'], a: 0, why: 'One role leans toward questions and experiments, the other toward building and shipping. Real jobs blur the line.' },
+        { id: 'roles.data.q2', q: 'MLOps borrows its habits mostly from which earlier role?', opts: ['Project management', 'DevOps: versioning, automated release and monitoring, applied to models', 'Graphic design', 'Sales'], a: 1, why: 'The tree draws MLOps as growing out of both the ML engineer and DevOps.' },
+        { id: 'roles.data.q3', q: 'On the tree, what does a solid arrow mean?', opts: ['One role reports to the other', 'One role grew out of the other', 'The roles are rivals', 'A pay grade'], a: 1, why: 'Solid: grew out of. Dashed: an influence or a common career move.' }
+      ] },
+      { id: 'ai', title: 'Building with AI models', blurb: 'Using models that someone else trained: prompts, products, agents, and the context they need.', quiz: [
+        { id: 'roles.ai.q1', q: 'As described here, what does an AI engineer mostly do?', opts: ['Trains large models from scratch', 'Builds products on top of models that others trained', 'Manages the data centre', 'Writes the model\'s licence'], a: 1, why: 'The role sits on the application side of the model: calling it, shaping its inputs, checking its outputs.' },
+        { id: 'roles.ai.q2', q: 'What is context engineering about?', opts: ['Choosing the model\'s colour scheme', 'Curating what goes into the model\'s window at each step: instructions, tools, memory, retrieved facts', 'Buying more hardware', 'Writing longer prompts'], a: 1, why: 'Anthropic describes it as curating and maintaining the best set of tokens during inference, a step on from prompt engineering.' },
+        { id: 'roles.ai.q3', q: 'Why does this tree draw prompt engineering leading into context engineering?', opts: ['Prompts stopped working', 'Once models run long tasks with tools, managing everything in the window matters more than the wording of one prompt', 'Context engineering is older', 'It was renamed by a standards body'], a: 1, why: 'An agent\'s window fills with tool results, notes and history. Someone has to decide what belongs there.' }
+      ] }
+    ],
+    nodes: [
+      { id: 'pm', fam: 'delivery', row: 0, you: true, title: 'Project Manager', one: 'Plans the work, the money and the dates, and answers for the outcome.', src: [],
+        read: [
+          { h: 'What the role is', p: 'A project manager turns a goal into a plan: scope, budget, schedule, risks, and the people needed. The role is far older than software, and in software it sits alongside agile roles more often than it is replaced by them.' },
+          { h: 'What AI changes', p: 'A lot of the paperwork is text work a model can speed up: first drafts of status notes, risk logs, meeting summaries, plans from notes. What it cannot do is answer for the outcome, weigh a trade-off between two unhappy stakeholders, or know which number in the report is wrong. (Teaching judgment.)' },
+          { h: 'What to learn', p: 'Enough about how models work to estimate AI-assisted work honestly, including the time to check it. Enough about risk to ask the right questions about data and reliability. That is tracks 1, 5 and 6 of this Academy.' }
+        ],
+        heading: 'Toward less time assembling reports and more time on decisions, risk and people. The plan itself may increasingly cover work done by software agents as well as by people, which needs someone who understands both.' },
+      { id: 'sm', fam: 'delivery', row: 1, you: true, title: 'Scrum Master', one: 'Serves one team: looks after the way of working and clears what blocks it.', src: ['R9'],
+        read: [
+          { h: 'What the role is', p: 'In the Scrum Guide, the Scrum Master is accountable for establishing Scrum as the guide defines it, and for the Scrum Team\'s effectiveness (R9). In practice: coaching the team, removing impediments, and keeping the events useful.' },
+          { h: 'What AI changes', p: 'Teams now have AI tools inside their daily work, with uneven habits: one person pastes everything in, another refuses to touch it. Working agreements about AI use, a Definition of Done that includes checking AI output, and honest retrospectives about what the tools helped or broke are natural Scrum Master ground. (Teaching judgment.)' },
+          { h: 'What to learn', p: 'The two tracks you have just done, so you can coach prompting and spot over-trust. Then agents and evaluation, so you can tell when a tool is really finishing work and when it only looks that way.' }
+        ],
+        heading: 'Toward keeping flow healthy in a team where some of the work is done by tools. The impediments change (review queues, unclear AI rules, too much generated code to check), the job of removing them does not.' },
+      { id: 'coach', fam: 'delivery', row: 2, you: true, title: 'Agile Coach', one: 'Works across teams and leaders to change how an organisation works.', src: ['R10'],
+        read: [
+          { h: 'What the role is', p: 'An agile coach works above the single team: helping several teams and their leaders adopt and adapt agile ways of working. Its roots are in the Agile Manifesto, written by seventeen people at Snowbird, Utah, in February 2001 (R10).' },
+          { h: 'What AI changes', p: 'Adopting AI tools is a change programme, and it fails in the ways change programmes fail: tools bought before habits change, measures that reward activity, fear nobody names. A coach already knows this shape. The new part is knowing the technology well enough to be credible. (Teaching judgment.)' },
+          { h: 'What to learn', p: 'All of this Academy, bottom up. A coach who can explain a context window to a director and a prompt rubric to a team is rare and useful.' }
+        ],
+        heading: 'Toward being the person who helps an organisation adopt AI the way it should have adopted agile: in small steps, with evidence, and with the people doing the work.' },
+      { id: 'enable', fam: 'delivery', row: 5, title: 'AI enablement coach', one: 'Helps teams adopt AI tools usefully and safely: habits, guardrails and measures. (Emerging; my reading.)', src: [],
+        read: [
+          { h: 'What the role is', p: 'A coach whose subject is AI adoption: which tools for which work, how to prompt and check, what the rules on data are, and how to tell whether any of it is helping. Titles vary a great deal, and this label is mine. I have no source that defines it, so treat it as an observation and verify it against job postings you trust.' },
+          { h: 'Why it sits on your branch', p: 'It is a coaching role first and a technical one second. The skills are facilitation, change, measurement and honesty about results, with enough technical depth to be believed.' }
+        ],
+        heading: 'It may fold back into every coach\'s and manager\'s job once the tools are ordinary, the way "internet skills" stopped being a job. Useful to be good at now either way.' },
+      { id: 'lead', fam: 'delivery', row: 6, forecast: true, title: 'Delivery lead for human and agent teams', one: 'Plans and steers work that is done partly by people and partly by software agents. (A forecast.)', src: [],
+        read: [
+          { h: 'The idea', p: 'If software agents take on real tasks, someone has to decide which work goes to an agent and which to a person, what "done" means for each, how agent work is reviewed, and what happens when an agent is confidently wrong. That is delivery management with a new kind of team member.' },
+          { h: 'How sure is this?', p: 'Not very. It is my forecast, drawn from how the other branches of this tree evolved. The title may never exist; the work may be absorbed by project managers, Scrum Masters and engineering leads. Nothing here is sourced.' }
+        ],
+        heading: 'Every role on this tree appeared when a new kind of work needed someone to own it. Agents create review, coordination and accountability work that somebody has to own. Delivery people already own that kind of work for humans.' },
+      { id: 'sysadmin', fam: 'ops', row: 0, title: 'System administrator', one: 'Keeps the servers, networks and accounts running.', src: [],
+        read: [
+          { h: 'What the role is', p: 'The system administrator installs, configures, patches and repairs the machines that software runs on. For a long time this was hands-on work, done separately from the people who wrote the software.' },
+          { h: 'Why it matters to the tree', p: 'Much of what follows on this branch is an answer to one problem: developers and administrators working apart, with releases thrown over a wall between them.' }
+        ],
+        heading: 'The work did not vanish; it moved into code. Much of what an administrator did by hand is now written as scripts and configuration that other roles on this branch maintain.' },
+      { id: 'sre', fam: 'ops', row: 1, title: 'Site reliability engineer', one: 'Treats keeping a service reliable as a software problem.', src: ['R2'],
+        read: [
+          { h: 'What the role is', p: 'Site reliability engineering came out of Google. In the introduction to Google\'s book on it, Ben Treynor Sloss describes SRE as what happens when you ask a software engineer to design an operations team (R2). The same page says he joined Google in 2003 to run a small production team; the book followed years later.' },
+          { h: 'The ideas it brought', p: 'Reliability as a number you agree and measure, a budget for how much failure is acceptable, and automating repetitive operations work away. These ideas travel well beyond Google.' }
+        ],
+        heading: 'Reliability thinking is now being applied to AI systems: what is an acceptable error rate for a model\'s answers, and how do you measure it? That question links this branch to evaluation work.' },
+      { id: 'devops', fam: 'ops', row: 2, title: 'DevOps engineer', one: 'Joins building and running software into one flow, with automation in between.', src: ['R3'],
+        read: [
+          { h: 'What the role is', p: 'DevOps began as a movement, not a job: bring development and operations together, automate the path from code to production, and release in small steps. Patrick Debois organised the first DevOpsDays in Ghent in 2009 (R3; taken from his speaker biography, not from the event page). The job title came later, and some argue it misses the point of the movement.' },
+          { h: 'The agile connection', p: 'DevOps carried agile\'s small batches and fast feedback past the end of the sprint and into production. If you coach agile teams, this is the same idea with different tools.' }
+        ],
+        heading: 'The pipeline habits of DevOps (version everything, test automatically, release in small steps, watch it in production) are the template for how models and prompts are now shipped.' },
+      { id: 'platform', fam: 'ops', row: 4, title: 'Platform engineer', one: 'Builds the internal product other teams use to ship and run their software.', src: ['R4'],
+        read: [
+          { h: 'What the role is', p: 'A platform team builds a shared foundation so that product teams do not each solve deployment, monitoring and security for themselves. The CNCF\'s 2023 paper on platforms quotes Evan Bottcher\'s definition: a foundation of self-service APIs, tools, services, knowledge and support, arranged as a compelling internal product (R4).' },
+          { h: 'The product idea', p: 'The important word is product. The platform has users, who are the other teams, and it succeeds when they choose to use it. That is a product-management stance applied inside the organisation.' }
+        ],
+        heading: 'Platforms are gaining AI services: approved models, shared prompt and evaluation tools, guardrails. Where an organisation has an "AI platform", these are often the people building it.' },
+      { id: 'analyst', fam: 'data', row: 0, title: 'Analyst and statistician', one: 'Turns data into answers people can act on.', src: [],
+        read: [
+          { h: 'What the role is', p: 'Analysts and statisticians collect data, check it, and draw conclusions from it: reports, forecasts, experiments. The habits of this role, such as asking how the data was gathered and how sure we are, run through the whole branch.' },
+          { h: 'Why it matters now', p: 'Judging whether an AI system works is a statistics question: a sample of cases, a measure, and a margin of doubt. The oldest role on this branch owns the most current skill.' }
+        ],
+        heading: 'Models now write queries and summarise tables, so the routine part shrinks. Knowing which question to ask, and whether the answer can be trusted, does not.' },
+      { id: 'ds', fam: 'data', row: 2, title: 'Data scientist', one: 'Explores data and builds models to answer questions and predict things.', src: ['R6'],
+        read: [
+          { h: 'What the role is', p: 'A data scientist combines statistics with programming to find patterns in data and build predictive models. The title was made famous by a 2012 Harvard Business Review article by Thomas Davenport and D.J. Patil (R6).' },
+          { h: 'Where the line is', p: 'On this tree the data scientist leans toward questions and experiments, and the ML engineer toward building and shipping. Real jobs blur the two. (My framing.)' }
+        ],
+        heading: 'Some of the work shifts from building a model for each problem to testing whether a large general model is good enough for it. Experiment design carries straight over.' },
+      { id: 'mle', fam: 'data', row: 3, title: 'ML engineer', one: 'Turns models into dependable software that runs in production.', src: [],
+        read: [
+          { h: 'What the role is', p: 'A machine learning engineer takes a model from experiment to product: the data pipelines, the training runs, the serving, the speed and the cost. It grew where data science met software engineering.' },
+          { h: 'How it differs from an AI engineer', p: 'On this tree the ML engineer trains and serves models; the AI engineer builds with models someone else trained. Plenty of people do both. (My framing.)' }
+        ],
+        heading: 'Two directions: deeper, into training and tuning large models, which fewer organisations do themselves; or across, into building products on ready-made models.' },
+      { id: 'mlops', fam: 'data', row: 4, title: 'MLOps engineer', one: 'Keeps models versioned, deployed, watched and retrained.', src: ['R5'],
+        read: [
+          { h: 'What the role is', p: 'MLOps applies DevOps habits to machine learning: version the data and the model, automate the release, watch the model in production, and retrain when it drifts. A 2015 paper from Google researchers, "Hidden Technical Debt in Machine Learning Systems", is often cited for arguing that the model code is a small part of a real ML system and that the rest is costly to maintain (R5; I confirmed the paper exists but not that sentence).' },
+          { h: 'Why a coach should know it', p: 'It is the reminder that a model in production is never finished. It needs monitoring and upkeep like any service, plus checks that its answers are still good.' }
+        ],
+        heading: 'The same discipline is being applied to prompts and agents: versioned prompts, test sets rerun on every change, and monitoring of answers in production.' },
+      { id: 'swe', fam: 'ai', row: 0, title: 'Software developer', one: 'Writes the software. The root that most of this tree grows from.', src: [],
+        read: [
+          { h: 'What the role is', p: 'The developer designs, writes, tests and maintains software. Three of the four branches here grow at least partly out of this role.' },
+          { h: 'What AI changes', p: 'Coding assistants and agents now write a share of the code. The developer\'s work tilts toward saying clearly what is wanted, reading and checking what comes back, and owning the result. That is closer to what a good reviewer or tech lead already does. (Teaching judgment.)' }
+        ],
+        heading: 'Toward more specifying, reviewing and steering, and less typing. The skills in this Academy\'s prompting track are becoming everyday developer skills.' },
+      { id: 'prompt', fam: 'ai', row: 3, title: 'Prompt engineer', one: 'Gets useful work out of a model by how the request is written.', src: [],
+        read: [
+          { h: 'What the role is', p: 'When large language models became widely available, it turned out that how you asked mattered a great deal. For a while "prompt engineer" was a job title. More lastingly it became a skill that many roles need: the one you practised in track 2.' },
+          { h: 'How sure is this?', p: 'That the title rose quickly and then spread into other roles is my reading of events, not a sourced claim. Verify before quoting it.' }
+        ],
+        heading: 'Less a job, more a literacy, and the starting point for context engineering, where the question widens from "how do I word this?" to "what should be in the window at all?".' },
+      { id: 'aieng', fam: 'ai', row: 4, title: 'AI engineer', one: 'Builds products on top of models that someone else trained.', src: ['R7'],
+        read: [
+          { h: 'What the role is', p: 'An AI engineer builds applications around ready-made models: calling them, feeding them the right information, checking what comes back, and wiring them to tools. The title is usually traced to a 2023 essay by Shawn Wang, "The Rise of the AI Engineer" (R7; I could not open the essay, so the description here is mine, not a quote).' },
+          { h: 'Why it appeared', p: 'When strong models became available to anyone through a programming interface, you no longer needed to train a model to build with one. That opened the work to software developers at large.' }
+        ],
+        heading: 'Toward agents: systems where the model takes many steps with tools. That makes managing the model\'s context, and testing its behaviour, the heart of the job.' },
+      { id: 'context', fam: 'ai', row: 5, title: 'AI agent and context engineer', one: 'Designs what an AI agent sees, remembers and can do at each step.', src: ['R8'],
+        read: [
+          { h: 'What the role is', p: 'An agent runs for many steps, and its context window fills with instructions, tool results, notes and history. A context engineer decides what belongs there. Anthropic\'s 2025 engineering post describes context engineering as the set of strategies for curating and maintaining the optimal set of tokens during inference, and calls it the natural progression of prompt engineering (R8).' },
+          { h: 'What the work looks like', p: 'Writing the standing instructions. Choosing which tools the agent gets and how they are described. Deciding what is summarised, what is stored as memory and what is dropped. Building the checks that say whether the agent did the job. You met the foundations in track 1: it is all the context window.' },
+          { h: 'Why a coach should care', p: 'An agent\'s instruction file reads a lot like a team\'s working agreement plus a Definition of Done. People who are good at writing those are closer to this role than they might think. (Teaching judgment.)' }
+        ],
+        heading: 'A young role with a shifting name. The lasting part is likely the skill: knowing what a model needs in front of it to do a task well, and proving that it did.' }
+    ],
+    // [from, to, kind]: 'grew' = grew out of (solid), 'move' = influence or a common move (dashed)
+    edges: [
+      ['pm', 'sm', 'move'], ['sm', 'coach', 'grew'], ['coach', 'enable', 'move'], ['pm', 'lead', 'move'], ['sm', 'lead', 'move'], ['enable', 'lead', 'move'], ['context', 'lead', 'move'],
+      ['sysadmin', 'sre', 'grew'], ['swe', 'sre', 'grew'], ['sysadmin', 'devops', 'grew'], ['swe', 'devops', 'grew'], ['devops', 'platform', 'grew'], ['sre', 'platform', 'move'],
+      ['analyst', 'ds', 'grew'], ['ds', 'mle', 'grew'], ['swe', 'mle', 'grew'], ['mle', 'mlops', 'grew'], ['devops', 'mlops', 'grew'],
+      ['swe', 'aieng', 'grew'], ['mle', 'aieng', 'move'], ['prompt', 'aieng', 'move'], ['prompt', 'context', 'grew'], ['aieng', 'context', 'grew'], ['platform', 'context', 'move']
+    ]
   }
 };
