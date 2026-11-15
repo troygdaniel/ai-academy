@@ -165,6 +165,23 @@ textarea.wtext { width: 100%; resize: vertical; min-height: 74px; padding: 12px;
 .size { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .size .btn { font-size: var(--fs-base); padding: 6px 12px; }
 
+/* track 3 pictures: traces, plans, the reliability dots */
+ol.trace { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+ol.trace li { border: 1px solid var(--line); border-left: 4px solid var(--info); border-radius: 10px; padding: 8px 12px; background: var(--bg); display: grid; gap: 3px; overflow-wrap: anywhere; }
+ol.trace li.you { border-left-color: var(--muted); } ol.trace li.app { border-left-color: var(--run); }
+ol.trace .who { font-size: var(--fs-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+ol.trace .pre { margin: 4px 0 0; padding: 8px 10px; font-size: 13px; }
+ol.trace code, fieldset.seg code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); border-radius: 5px; padding: 0 5px; }
+ol.plan { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+ol.plan li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--bg); display: grid; grid-template-columns: 26px 1fr auto; gap: 4px 10px; align-items: center; }
+ol.plan .num { font-weight: 700; color: var(--muted); text-align: center; } ol.plan .txt { font-weight: 600; }
+ol.plan .mv { display: flex; gap: 6px; } ol.plan .mv .btn { padding: 4px 11px; min-width: 36px; }
+ol.plan .check { grid-column: 2 / -1; display: flex; gap: 8px; align-items: center; font-size: var(--fs-md); color: var(--muted); min-height: 26px; }
+.widget > .check, .phase > .check { display: flex; gap: 8px; align-items: flex-start; }
+.big { font-size: var(--fs-lg); margin: 6px 0 10px; } .big b { font-size: 34px; font-variant-numeric: tabular-nums; margin-right: 6px; }
+.dots100 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; max-width: 420px; }
+.dots100 i { aspect-ratio: 1; border-radius: 50%; background: var(--ok); } .dots100 i.bad { background: none; border: 2px solid var(--err); }
+
 /* the roles family tree */
 .treebox { padding: 10px; overflow-x: auto; }
 .tree { position: relative; margin: 0 auto; }

@@ -18,8 +18,12 @@ var ACADEMY = {
       { id: 'iterate', title: 'Iterate like a sprint', idea: 'One change, check, repeat.' },
       { id: 'judge', title: 'Judging a prompt', idea: 'A rubric before you press send.' }
     ] },
-    { id: 'agents', title: 'Tools and agents', blurb: 'Models that call tools, plan, remember, and where that breaks.', concepts: [
-      { id: 'tooluse', title: 'Tool use' }, { id: 'loop', title: 'The agent loop' }, { id: 'memory', title: 'Memory' }, { id: 'agentfail', title: 'Where agents fail' }
+    { id: 'agents', title: 'Tools and agents', blurb: 'Models that call tools, work in a loop, plan and remember, and where that breaks.', concepts: [
+      { id: 'tooluse', title: 'Tool use', idea: 'The model asks; software does.' },
+      { id: 'loop', title: 'The agent loop', idea: 'Think, act, observe, repeat.' },
+      { id: 'planning', title: 'Planning', idea: 'Ordered steps, and checkpoints where it costs.' },
+      { id: 'memory', title: 'Memory', idea: 'Saved text, put back in the window.' },
+      { id: 'agentfail', title: 'Where agents fail', idea: 'Compounding errors, injection, too much access.' }
     ] },
     { id: 'grounding', title: 'Grounding', blurb: 'Giving a model the facts: embeddings, search, RAG, citations.', concepts: [
       { id: 'embed', title: 'Embeddings' }, { id: 'search', title: 'Search' }, { id: 'rag', title: 'RAG' }, { id: 'cite', title: 'Citations' }
@@ -68,6 +72,13 @@ var ACADEMY = {
     { id: 'S17', title: 'OpenAI docs: Structured outputs', url: 'https://developers.openai.com/api/docs/guides/structured-outputs', note: 'JSON mode gives valid JSON; structured outputs also hold the answer to a supplied schema.' },
     { id: 'S18', title: 'Anthropic docs: Define success criteria and build evaluations', url: 'https://platform.claude.com/docs/en/test-and-evaluate/define-success', note: 'Define specific, measurable success criteria and build tests before iterating on a prompt.' },
     { id: 'S19', title: 'OWASP Top 10 for LLM Applications 2025: LLM02 Sensitive Information Disclosure', url: 'https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/', note: 'Sensitive information disclosure as a listed risk for applications built on language models.' },
+    { id: 'S20', title: 'Anthropic docs: Tool use with Claude', url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview', note: 'A tool has a name, a description and an input schema. The model returns a tool request; your application runs the tool and sends the result back.' },
+    { id: 'S21', title: 'Anthropic Engineering (2024): Building effective agents', url: 'https://www.anthropic.com/engineering/building-effective-agents', note: 'Workflows (steps fixed in code) versus agents (the model directs its own steps); patterns such as chaining and orchestrator with workers.' },
+    { id: 'S22', title: 'Yao and others (2022): ReAct: Synergizing Reasoning and Acting in Language Models', url: 'https://arxiv.org/abs/2210.03629', note: 'Interleaving reasoning steps with actions. ICLR 2023.' },
+    { id: 'S23', title: 'Model Context Protocol: Introduction', url: 'https://modelcontextprotocol.io/', note: 'MCP as an open-source standard for connecting AI applications to external systems.' },
+    { id: 'S24', title: 'OWASP Top 10 for LLM Applications 2025: LLM01 Prompt Injection', url: 'https://genai.owasp.org/llmrisk/llm01-prompt-injection/', note: 'Prompt injection, direct and indirect, listed first.' },
+    { id: 'S25', title: 'OWASP Top 10 for LLM Applications 2025: LLM06 Excessive Agency', url: 'https://genai.owasp.org/llmrisk/llm062025-excessive-agency/', note: 'Too much functionality, permission or autonomy; least privilege and human approval for high-impact actions.' },
+    { id: 'S26', title: 'Simon Willison (2025): The lethal trifecta for AI agents', url: 'https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/', note: 'Private data, untrusted content and external communication: together they let planted text exfiltrate data.' },
     { id: 'R2', title: 'Google: Site Reliability Engineering, Introduction (Ben Treynor Sloss)', url: 'https://sre.google/sre-book/introduction/', note: 'SRE as what happens when you ask a software engineer to design an operations team.' },
     { id: 'R3', title: 'devopsdays.org: Patrick Debois, speaker biography', url: 'https://devopsdays.org/events/2019-ghent/speakers/patrick-debois/', note: 'Says he organised the first devopsdays in 2009. The 2009 event page itself was not found.' },
     { id: 'R4', title: 'CNCF TAG App Delivery (2023): Platforms White Paper', url: 'https://tag-app-delivery.cncf.io/whitepapers/platforms/', note: 'Quotes Evan Bottcher\'s definition of a platform as a foundation of self-service capabilities arranged as an internal product.' },
@@ -417,6 +428,154 @@ var ACADEMY = {
         { id: 'judge.q2', q: 'A prompt scores six out of six in the sandbox. What does that tell you?', opts: ['The answer will be correct', 'All six parts appear to be present; whether they are right for the job is still your call', 'The prompt is safe to send anywhere', 'Nothing at all'], a: 1, why: 'The rubric finds presence, not quality. It raises the odds and replaces no judgment.' },
         { id: 'judge.q3', q: 'You are about to paste a customer email, with name and account number, into an AI tool to get a summary. First move?', opts: ['Paste it; summaries are harmless', 'Check whether that tool is approved for that data; if unsure, remove or replace the identifying details', 'Paste it but ask the model to forget it', 'Paste half of it'], a: 1, why: 'What you send may be stored or processed outside your control. Asking a model to forget does not undo sending.' },
         { id: 'judge.q4', q: 'The prompt is good and the answer reads well. What is left to do?', opts: ['Nothing', 'Check the facts in the answer against a source', 'Ask the model whether it is sure', 'Make the prompt longer'], a: 1, why: 'A good prompt improves the odds. Fluent is still not verified.' }
+      ]
+    },
+    tooluse: {
+      widget: 'tooluse', src: ['S20', 'S23'],
+      idea: 'On its own, a model can only write text. A tool lets it ask your software to do something: look a thing up, run a sum, send a message. The model asks. Something else does.',
+      tryit: 'Pick a question, then switch the tools on and off. Watch who does what: the model writes a request, the app runs it, and the result goes back into the window.',
+      tryNote: 'A toy with a scripted model. The calculator is real (your browser does the sum); the ticket system is one made-up ticket.',
+      toolbox: [
+        { id: 'calc', name: 'calculator', desc: 'Does arithmetic exactly. Input: an expression.' },
+        { id: 'ticket', name: 'ticket_lookup', desc: 'Returns the status of a ticket. Input: a ticket id.' }
+      ],
+      tickets: { 'HER-42': { status: 'In review', owner: 'not assigned' } },
+      questions: [
+        { label: 'A sum', q: 'What is 1,234 × 5,678?', tool: 'calc', input: { expression: '1234 * 5678' }, guess: '1,234 × 5,678 is 7,006,552.', final: '1,234 × 5,678 is {result}.', miss: 'Close, and wrong. The right length and the right first digits, off by 100. A model predicts digits; it does not calculate.' },
+        { label: 'A ticket', q: 'What is the status of ticket HER-42?', tool: 'ticket', input: { id: 'HER-42' }, guess: 'Ticket HER-42 is currently In progress.', final: 'HER-42 is In review and has no owner yet.', miss: 'Invented. The model has never seen your ticket system, so it produced a likely-sounding status.' },
+        { label: 'A haiku', q: 'Write a haiku about standups.', tool: null, final: 'Fifteen minutes, sharp. / Yesterday, today, blockers. / The coffee goes cold.' }
+      ],
+      read: [
+        { h: 'What a tool is', p: 'A tool is a function that an application offers to the model. It is described to the model by a name, a description of what it does, and the inputs it takes (S20). Those descriptions sit in the context window like any other text.' },
+        { h: 'Who does what', p: 'The model never runs anything. It writes a structured request, such as "call the calculator with 1234 * 5678", and stops. The application runs the tool and puts the result back into the window, and the model carries on with the result in view (S20). Some tools, such as a provider\'s web search, run on the provider\'s side; the split is the same.' },
+        { h: 'Why it matters', p: 'Tools repair the two weak spots from track 1. Exact work, such as arithmetic and lookups, is done by software that is exact. Fresh or private facts come from a live system, not from training. The answer rests on a result, not on memory.' },
+        { h: 'The model chooses', p: 'The model decides whether to use a tool, and which, by reading the descriptions. A vague description gets the wrong tool, or none. The model can also pass the wrong inputs or misread the result. A tool call is as fallible as anything else it writes.' },
+        { h: 'Connectors', p: 'The Model Context Protocol, or MCP, is described by its own documentation as an open-source standard for connecting AI applications to external systems (S23). The idea is one kind of plug, so a connector written once works in many tools.' }
+      ],
+      under: { h: 'Under the hood: the request is just text', p: 'A tool call is generated tokens in an agreed shape, usually JSON. The application reads that text and decides what to do with it. This is where permissions live: the application can run the request, refuse it, ask you first, or run it somewhere walled off. The model has no hands. The application is the hands.' },
+      agile: 'A tool is access, so treat it like a new joiner\'s permissions. You would not hand over production database rights on day one. Give an agent the tools this task needs and no more, and review its tool list the way you would review who can do what.',
+      tools: 'In chat tools these show up as connectors, plugins or "search the web". In coding tools they are read file, edit file, run command. Find the list of what your tool can do and its approval settings (ask every time, or allow), and learn the defaults. (Names and defaults differ per tool: verify.)',
+      quiz: [
+        { id: 'tooluse.q1', q: 'When a model "uses a calculator tool", what does the model itself do?', opts: ['Runs the calculation inside the model', 'Writes a request to call the tool; the application runs it and returns the result', 'Opens a calculator app on your screen', 'Guesses, then checks the guess'], a: 1, why: 'The model only writes text. The application reads the request, runs the tool and puts the result into the window.' },
+        { id: 'tooluse.q2', q: 'How does a model decide which tool to call?', opts: ['It tries them all', 'From the names and descriptions of the tools in its context window', 'The user must always say which', 'At random'], a: 1, why: 'Tool descriptions are text in the window. Clear descriptions get the right tool; vague ones get the wrong one, or none.' },
+        { id: 'tooluse.q3', q: 'Which job gains most from a tool?', opts: ['Rewording a paragraph', 'Looking up the current status of a ticket in your tracker', 'Suggesting workshop names', 'Explaining a concept'], a: 1, why: 'Live, private facts are not in the model\'s training. A lookup tool brings the real value into the window.' },
+        { id: 'tooluse.q4', q: 'Where is the right place to control what an agent is allowed to do?', opts: ['In a polite sentence in the prompt', 'In the application that runs the tools: which tools exist and which need approval', 'In the temperature setting', 'Nowhere; models police themselves'], a: 1, why: 'The model only asks. The application decides whether to run the request, so that is where permission belongs.' }
+      ]
+    },
+    loop: {
+      widget: 'loop', src: ['S21', 'S22'],
+      idea: 'An agent is a model using tools in a loop: decide a step, take it, look at the result, decide the next. It carries on until the job is done, or until something stops it.',
+      tryit: 'The agent has been asked to make a failing test pass. Step through its loop and watch the window fill. Then lower the step limit and run it again.',
+      tryNote: 'A scripted run, written by hand. A real agent\'s steps vary from run to run, and it does not always get there.',
+      goal: 'Make the failing test pass.',
+      base: 300, budget: 2400,
+      steps: [
+        { think: 'I should see what is failing first.', act: 'run_tests()', obs: '1 failed: test_export_empty_report expected a header row, got nothing.', t: 180 },
+        { think: 'Find the code that test exercises.', act: 'read_file("export.py")', obs: '42 lines. The function returns early when the report has no rows.', t: 420 },
+        { think: 'The early return skips the header. Write the header before checking for rows.', act: 'edit_file("export.py")', obs: 'File saved.', t: 160, edits: true },
+        { think: 'Check the change.', act: 'run_tests()', obs: '1 failed: test_export_empty_report expected 1 line, got 2.', t: 190 },
+        { think: 'My edit must have added something extra. Read the function again.', act: 'read_file("export.py")', obs: 'The new code writes the header and then a blank line.', t: 430 },
+        { think: 'Remove the blank line.', act: 'edit_file("export.py")', obs: 'File saved.', t: 150 },
+        { think: 'Check again.', act: 'run_tests()', obs: 'All 12 tests passed.', t: 170 }
+      ],
+      done: 'Done. The export now writes a header for an empty report, and all 12 tests pass.',
+      read: [
+        { h: 'Think, act, observe', p: 'Each turn of the loop has three parts: the model reasons about what to do, asks for a tool to be run, and reads what came back. Interleaving reasoning with actions in this way was studied in a 2022 paper known as ReAct (S22). Every observation goes into the window, so the next decision is made with it in view.' },
+        { h: 'Agent or workflow?', p: 'Anthropic\'s guide to building agents draws a line between workflows, where the steps are fixed in code in advance, and agents, where the model decides the steps as it goes. It is reported to say workflows offer predictability and agents offer flexibility (S21). Plenty of useful systems are workflows. Not everything needs an agent.' },
+        { h: 'What stops it', p: 'The model decides it is finished. Or a step limit is reached, or a budget of tokens or time runs out, or an error occurs, or a person interrupts. A loop with no limit can run for a long time and cost a lot.' },
+        { h: 'The window fills up', p: 'Every observation adds tokens. A long task can reach the limit of the context window, and the tool then summarises or drops older material, as in track 1. An agent can lose an early detail in the middle of a job.' },
+        { h: '"Done" needs a test', p: 'An agent stops when it believes it is done. Give it something to check against, such as tests that must pass or a checklist, so that "done" is something observed and not something claimed.' }
+      ],
+      under: { h: 'Under the hood: the loop is ordinary code', p: 'Nothing new happens inside the model. It is the same next-token machine. Around it sits a small program, often called the harness: call the model; if it asked for a tool, run the tool and add the result to the window; call the model again; stop when it answers without asking for a tool. What people call "the agent" is the model plus that loop, the tools and the standing instructions.' },
+      agile: 'It is inspect and adapt at machine speed: a small step, real feedback, an adjustment. The same failure applies, too: a loop with no Definition of Done does not finish well. Give the agent acceptance criteria it can check for itself.',
+      tools: 'Coding agents show you the loop: you can watch them read files, run commands and read the output. Watch a few runs from start to end before you trust one, and learn how to interrupt it and where step or spending limits are set. (Verify per tool.)',
+      quiz: [
+        { id: 'loop.q1', q: 'What are the three parts of one turn of an agent\'s loop?', opts: ['Plan, build, ship', 'Think, act, observe', 'Read, write, delete', 'Train, test, deploy'], a: 1, why: 'The model reasons, asks for a tool to be run, and reads the result. Then it goes round again.' },
+        { id: 'loop.q2', q: 'What is the difference between a workflow and an agent, as described here?', opts: ['A workflow uses no model', 'In a workflow the steps are fixed in advance; an agent decides its steps as it goes', 'An agent is always better', 'There is none'], a: 1, why: 'Fixed steps give predictability. Model-chosen steps give flexibility, and less certainty about what will happen.' },
+        { id: 'loop.q3', q: 'An agent has run for forty steps on one task. What risk grows with every step?', opts: ['The model gets tired', 'The window fills with observations, so early details can be summarised away or dropped', 'The temperature rises', 'The tools wear out'], a: 1, why: 'Each observation adds tokens. Long runs hit the window limit, and something has to give.' },
+        { id: 'loop.q4', q: 'An agent says "Done, everything works." What makes that trustworthy?', opts: ['Its confident tone', 'A check it had to pass, such as the tests, that you can see the result of', 'The number of steps it took', 'Asking it "are you sure?"'], a: 1, why: '"Done" should be observed, not claimed. Give the agent a test to pass and look at the result yourself.' }
+      ]
+    },
+    planning: {
+      widget: 'planning', src: ['S21', 'S25'],
+      idea: 'For a big job, an agent does better when the work is broken into ordered steps before it starts, with a person checking at the points where a mistake would be expensive.',
+      tryit: 'The steps below are in a bad order. Move them until each step has what it needs, then decide where a person should approve before the agent goes on.',
+      tryNote: 'A toy: the dependencies and the risky step are set by hand. Real plans have more than one sensible order.',
+      goal: 'Add a CSV export button to the reports page.',
+      start: ['code', 'deploy', 'read', 'test', 'write'],
+      steps: [
+        { id: 'read', text: 'Read the existing reports code', needs: [] },
+        { id: 'write', text: 'Write a test for the export', needs: ['read'] },
+        { id: 'code', text: 'Write the export code', needs: ['read'] },
+        { id: 'test', text: 'Run the tests', needs: ['write', 'code'] },
+        { id: 'deploy', text: 'Deploy to the live site', needs: ['test'], risky: true }
+      ],
+      read: [
+        { h: 'Why plan first', p: 'Without a plan, an agent takes the step that looks obvious right now, and can paint itself into a corner: editing before reading, building before checking what exists. A plan written first also sits in the window as a reminder of the goal.' },
+        { h: 'A plan is cheap to review', p: 'Reading a five-line plan takes a minute. Reviewing five hundred changed lines takes an hour. The cheapest moment to catch a wrong approach is before any work is done. Many tools offer a plan mode for this. (Verify for yours.)' },
+        { h: 'Split big work', p: 'Anthropic\'s guide describes patterns such as chaining steps one after another, and an orchestrator that hands parts of a job to workers (S21; I have this from summaries). Smaller pieces mean smaller windows and a clearer "done" for each.' },
+        { h: 'Checkpoints where it costs', p: 'Not every step needs a person. Steps you can undo, such as reading, drafting and running tests, can flow. Steps you cannot undo, or that face outward, such as deleting, deploying, sending or paying, deserve an approval. OWASP\'s guidance on agents with too much freedom includes requiring a person to approve high-impact actions (S25).' },
+        { h: 'Plans change', p: 'An observation may show the plan was wrong. A good agent revises it, and a good reviewer expects that. The plan is a starting point, not a contract.' }
+      ],
+      under: { h: 'Under the hood: a plan is more text in the window', p: 'A plan does not bind the model. It is text, and in a long run it scrolls far back while newer text piles up, so the agent can drift from it. Tools counter this by keeping a task list and showing it to the model again as work goes on. (A general description; verify for your tool.)' },
+      agile: 'This is backlog refinement and slicing: small, ordered items, each checkable on its own, each with a clear done. The approval gate is release sign-off thinking: put it where the risk is, not on everything.',
+      tools: 'Look for a plan mode, a task list the agent keeps, and approval settings for each kind of action. For anything bigger than a small fix, ask for the plan first and correct the plan, which is cheaper than correcting the result. (Verify per tool.)',
+      quiz: [
+        { id: 'planning.q1', q: 'Why ask an agent for a plan before it starts a large task?', opts: ['Plans make the model smarter', 'A plan is quick to review, so a wrong approach is caught before the work is done', 'It uses fewer tokens overall', 'Agents cannot work without one'], a: 1, why: 'A minute on the plan can save an hour on the result. It also keeps the goal in the window.' },
+        { id: 'planning.q2', q: 'Which step most deserves a human approval before the agent proceeds?', opts: ['Reading a file', 'Running the tests', 'Deploying to the live site', 'Drafting a summary'], a: 2, why: 'Approve what is hard to undo or faces outward. Reading, drafting and testing can flow.' },
+        { id: 'planning.q3', q: 'You put an approval step before every single action. What happens?', opts: ['Maximum safety at no cost', 'You become the bottleneck, and start approving without reading', 'The agent gets faster', 'Nothing changes'], a: 1, why: 'Approvals everywhere turn into rubber-stamping. Put them where a mistake is expensive.' },
+        { id: 'planning.q4', q: 'Halfway through, the agent finds its plan was based on a wrong assumption. The best behaviour?', opts: ['Follow the plan anyway', 'Revise the plan, say what changed and why, and carry on', 'Stop and delete everything', 'Hide the problem'], a: 1, why: 'Plans meet reality. Revising in the open is the agent version of inspect and adapt.' }
+      ]
+    },
+    memory: {
+      widget: 'memory', src: ['R8'],
+      idea: 'An agent has no memory of its own between sessions. What looks like memory is text that a tool saves somewhere and puts back into the window later.',
+      tryit: 'In session 1 you tell the agent three things. Choose which ones get saved to its notes, start a new session, and ask. Then let the facts change behind its back.',
+      tryNote: 'A toy with scripted answers. Real tools differ in what they save, when, and whether they ask you first.',
+      system: 'You are a helpful assistant for a delivery team.',
+      facts: [
+        { id: 'day', text: 'We release on Thursdays.', ask: 'Which day do we release?', ans: 'You release on Thursdays.' },
+        { id: 'spell', text: 'Use British spelling in every document.', ask: 'Which spelling should I use?', ans: 'British spelling, in every document.' },
+        { id: 'secret', text: 'The staging password is (a made-up password).', ask: 'What is the staging password?', ans: 'It is in my notes, in plain text: (a made-up password).', secret: true }
+      ],
+      change: { id: 'day', label: 'Meanwhile the team moved the release to Tuesdays, and nobody updated the notes', now: 'Tuesdays' },
+      read: [
+        { h: 'Three kinds of memory', p: 'Short-term: the context window, gone when the session ends. Long-term notes: text saved to a file or store and loaded at the start of later sessions. Lookup: a store that is searched for the relevant pieces when they are needed, which is the subject of track 4. (This three-way split is my framing.)' },
+        { h: 'Notes', p: 'Anthropic\'s post on context engineering describes agents writing notes that are kept outside the window and pulled back in later (R8; I have this from summaries). Project instruction files are the hand-written version of the same thing: standing text the tool loads every time.' },
+        { h: 'Memory goes stale', p: 'A note is true on the day it is written. If nobody updates it, the agent acts on the old fact with full confidence. Memory needs an owner and a review, like any other documentation.' },
+        { h: 'Memory can leak, and can be planted', p: 'Anything saved will be read by future sessions, and by anyone who can open the file, so secrets do not belong there. And if an agent saves something it read in untrusted content, a bad instruction can come back in every later session. (Teaching judgment; the next lesson covers why.)' },
+        { h: 'Less is more', p: 'Everything loaded costs tokens in every session and competes for the model\'s attention. Good memory is short, current and specific.' }
+      ],
+      under: { h: 'Under the hood: memory is how the window is assembled', p: 'At the start of a session the harness builds the window: the system instructions, any instruction files, any memory notes, then your message. "Remembering" means nothing more than which text gets assembled. It is the same window with the same limits, which is why this is called context engineering.' },
+      agile: 'It is the team\'s working agreement and wiki. Useful when short, current and owned; harmful when long, stale and trusted. When the team changes how it works, add "update the agent\'s instructions" to the retrospective actions.',
+      tools: 'Find where your tool keeps its instructions and memories, how to view and edit them, and whether they are shared with your team. Read what is in there now; you may be surprised. (Names and places differ per tool: verify.)',
+      quiz: [
+        { id: 'memory.q1', q: 'An AI tool "remembers" your preferences across sessions. What is actually happening?', opts: ['The model was retrained on your chats', 'The tool saved some text and loads it into the window at the start of each session', 'The model never forgets', 'Your browser remembers'], a: 1, why: 'The model is frozen. Memory is saved text that is put back in the window.' },
+        { id: 'memory.q2', q: 'The team changed its release day, and the agent keeps using the old one. The likely cause?', opts: ['The model is broken', 'A stale note or instruction file that nobody updated', 'The temperature is too high', 'The context window is too large'], a: 1, why: 'Notes are true when written. They need an owner and an update when things change.' },
+        { id: 'memory.q3', q: 'What should never be saved to an agent\'s notes or instruction files?', opts: ['The team\'s coding conventions', 'Passwords, keys and other secrets', 'The Definition of Done', 'The glossary'], a: 1, why: 'Notes are plain text read by every future session and by anyone with the file. Secrets belong in a secrets store.' },
+        { id: 'memory.q4', q: 'Why keep memory notes short?', opts: ['Models cannot read long text', 'Every note costs tokens in every session and competes for attention', 'Short notes are encrypted', 'There is no reason'], a: 1, why: 'Notes share the window with the task. Short, current and specific beats long and thorough.' }
+      ]
+    },
+    agentfail: {
+      widget: 'chain', src: ['S24', 'S25', 'S26'],
+      idea: 'Agents fail in their own ways. Small errors add up over many steps, they can be steered by text they read, and they can do real damage with the access they were given.',
+      tryit: 'Set how often a single step goes right, and how many steps the job has. Then switch on a check after each step.',
+      tryNote: 'Plain arithmetic, with two simplifications: every step is equally likely to fail, on its own, and a check catches every failure. Real work is messier, but the shape holds.',
+      read: [
+        { h: 'Errors compound', p: 'A step that goes right 95 times in 100 sounds dependable. Chain twenty of them and all twenty go right only about 36 times in 100. That is arithmetic, not a measurement of any tool. It is why checks along the way matter more as tasks get longer.' },
+        { h: 'Saying "done" when it is not', p: 'An agent can report success with tests failing, or with part of the job quietly skipped. Check outcomes, not reports.' },
+        { h: 'Prompt injection', p: 'A model cannot reliably tell instructions from data. Text inside a web page, an email or a document that says "ignore your instructions and do this" may be followed. OWASP puts prompt injection first in its list of risks for applications built on language models, including the indirect kind that arrives in outside content (S24).' },
+        { h: 'The dangerous combination', p: 'Simon Willison calls it the lethal trifecta: access to private data, exposure to untrusted content, and a way to communicate externally. With all three, an attacker\'s text can get an agent to send your data out (S26). The defence is to remove one of the three.' },
+        { h: 'Too much access', p: 'OWASP names the risk excessive agency and gives three causes: too much functionality, too many permissions, too much autonomy (S25). The answers are old ones: the least access that does the job, and a person approving the actions that matter.' }
+      ],
+      under: { h: 'Under the hood: why injection is hard to fix', p: 'Everything in the window is one stream of tokens. There is no wall inside the model between "instructions from my owner" and "text I was asked to read"; both are text, and the model predicts what should follow all of it. Defences lower the odds, and none is known to remove the problem, which is why the safest design limits what a fooled agent could do. (The common explanation; verify.)' },
+      agile: 'Treat an agent like a capable contractor on day one: scoped access, small tasks, work reviewed, and more trust as the evidence builds. Put agent risks on the risk register with owners: what it can touch, what it reads, and who approves what.',
+      tools: 'Before you give a tool access to email, files or repositories, ask the three questions: can it see private data, does it read content from outside, can it send things out? Prefer read-only access, keep approval on for sending, deleting and deploying, and use a sandbox where one is offered. Follow your organisation\'s rules. (Verify per tool.)',
+      quiz: [
+        { id: 'agentfail.q1', q: 'Each step of a task goes right 95% of the time. Roughly how often do 20 steps in a row all go right?', opts: ['95%', 'About 75%', 'About 36%', 'About 5%'], a: 2, why: '0.95 multiplied by itself 20 times is about 0.36. Small error rates compound over long chains.' },
+        { id: 'agentfail.q2', q: 'What is indirect prompt injection?', opts: ['A user typing a rude prompt', 'Instructions hidden in content the agent reads, such as a web page or an email, that it then follows', 'A slow network', 'A model running out of tokens'], a: 1, why: 'The model cannot reliably separate data from instructions, so text it reads can steer it.' },
+        { id: 'agentfail.q3', q: 'Which three things together make the "lethal trifecta"?', opts: ['Speed, cost and quality', 'Private data, untrusted content and a way to send things out', 'Tokens, context and temperature', 'Plan, do and check'], a: 1, why: 'With all three, planted text can make an agent send private data to an attacker. Remove one.' },
+        { id: 'agentfail.q4', q: 'An agent needs to read tickets and draft replies. What access fits?', opts: ['Full admin, to be safe', 'Read tickets and write drafts; a person sends', 'Read and delete everything', 'Whatever the default is'], a: 1, why: 'Least privilege, with a human on the outward-facing step. That limits the damage if the agent is wrong or fooled.' }
       ]
     }
   },
