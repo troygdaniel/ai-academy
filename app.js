@@ -9,7 +9,7 @@
   function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
 
   // ---------- state: kept in this browser only (localStorage), and Save / Load to a file ----------
-  function fresh() { return { v: 1, xp: 0, days: {}, cards: {}, done: {}, goal: 10, read: 22, theme: '', names: [], played: {}, readm: {}, pos: { space: 'learn', track: 'models', concept: 'tokens', zoom: 0, fam: '', role: '' } }; }
+  function fresh() { return { v: 1, xp: 0, days: {}, cards: {}, done: {}, goal: 10, read: 22, theme: '', names: [], played: {}, readm: {}, found: {}, sound: false, pos: { space: 'learn', track: 'models', concept: 'tokens', zoom: 0, fam: '', role: '' } }; }
   // Accept a saved object only if it has the right shape; fill anything missing (older files have no names, no roles position).
   function adopt(j) {
     if (!(j && j.v === 1 && j.cards && typeof j.cards === 'object' && j.days && typeof j.days === 'object')) return null;
@@ -19,7 +19,8 @@
     s.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : '';
     s.names = Array.isArray(s.names) ? s.names.filter(function (n) { return typeof n === 'string'; }).slice(0, 50) : [];
     if (!s.done || typeof s.done !== 'object') s.done = {};
-    ['played', 'readm'].forEach(function (f) { if (!s[f] || typeof s[f] !== 'object') s[f] = {}; }); // which toys you have poked and which Read more pages you opened
+    s.sound = s.sound === true;
+    ['played', 'readm', 'found'].forEach(function (f) { if (!s[f] || typeof s[f] !== 'object') s[f] = {}; }); // which toys you have poked and which Read more pages you opened
     for (k in s.cards) { c = s.cards[k]; if (!c || typeof c.ef !== 'number' || typeof c.due !== 'number' || typeof c.int !== 'number' || typeof c.rep !== 'number') delete s.cards[k]; }
     for (k in s.days) { c = s.days[k]; if (!c || typeof c.min !== 'number' || typeof c.xp !== 'number') delete s.days[k]; }
     return s;
@@ -33,7 +34,7 @@
   function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 150); }
   addEventListener('pagehide', saveNow);
   function today() { var k = dayNow(); return S.days[k] || (S.days[k] = { min: 0, xp: 0 }); }
-  function addXp(n) { var l0 = Math.floor(S.xp / 100); S.xp += n; today().xp += n; save(); if (Math.floor(S.xp / 100) > l0) toast('Level ' + (1 + Math.floor(S.xp / 100))); }
+  function addXp(n) { var l0 = Math.floor(S.xp / 100); S.xp += n; today().xp += n; save(); if (Math.floor(S.xp / 100) > l0) { toast('Level ' + (1 + Math.floor(S.xp / 100))); snd('level'); } }
   function activeDay(d) { var x = S.days[d]; return !!x && (x.min >= 1 || x.xp > 0); }
   function streak() { var d = dayNow(), n = 0; if (!activeDay(d)) d--; while (activeDay(d)) { n++; d--; } return n; }
 
@@ -229,12 +230,13 @@
       el.dataset.key = 'learn.' + c.id;
       el.innerHTML = '<div class="wrap lesson" style="--c:' + hue(trackIndex(t)) + '"><div class="head big"><div><div class="kicker">Track ' + (trackIndex(t) + 1) + ' · ' + esc(t.title) + '</div><h1>' + esc(c.title) + '</h1></div><div class="lrail sp" id="lrail" role="group" aria-label="Lessons in this track"></div></div>' +
         '<p class="idea">' + esc(L.idea) + '</p><ol class="steps" id="steps" aria-label="This lesson, in three steps"></ol>' +
-        '<div class="playmat"><section class="card toy" id="toy"><div class="toyhead"><h3>Try it</h3><span class="tag turn" id="toy-state"></span></div><p class="muted" style="margin:0 0 10px">' + esc(L.tryit) + '</p><div class="widget" id="widget"></div><p class="note">' + esc(L.tryNote) + '</p></section>' +
+        '<div class="playmat"><section class="card toy" id="toy"><div class="toyhead"><h3>Try it</h3><span class="tag turn" id="toy-state"></span></div><p class="muted" style="margin:0 0 10px">' + esc(L.tryit) + '</p><div class="missions" id="missions"></div><div class="widget" id="widget"></div><p class="note">' + esc(L.tryNote) + '</p></section>' +
         '<div class="qcol"><section class="card quiz" id="quiz" aria-label="Quiz"></section></div>' +
         '<div class="lenses"><div class="card"><h3>The Agile lens</h3><p>' + esc(L.agile) + '</p></div><div class="card"><h3>In practice</h3><p>' + esc(L.tools) + '</p></div></div></div>' +
         '<p><button type="button" class="btn" data-act="detail" aria-keyshortcuts="+">Read more, in big type' + kbd('+') + '</button></p></div>';
       var host = $('#widget', el);
       if (WIDGETS[L.widget]) WIDGETS[L.widget](host, L, sandboxApi); else host.innerHTML = '<p class="muted">No picture for this one yet.</p>';
+      initMissions(c.id, L.widget, host);
     }
     $('#lrail', el).innerHTML = readyIn(t).map(function (x, i) { // the lessons of this track, as a rail you can walk with the arrows
       return '<button type="button" data-concept="' + x.id + '" class="' + (S.done[x.id] ? 'ok' : '') + '"' + (x.id === c.id ? ' aria-current="true"' : '') + ' title="' + esc(x.title) + '" aria-label="Lesson ' + (i + 1) + ': ' + esc(x.title) + (S.done[x.id] ? ', done' : '') + '">' + (i + 1) + '</button>';
@@ -253,7 +255,93 @@
     var cid = S.pos.concept; if (S.pos.space !== 'learn' || S.pos.zoom !== 2 || !cid || S.played[cid]) return;
     S.played[cid] = true; save(); renderSteps(cid); burst($('#toy-state'), 'var(--ok)', 8);
   }
-  ['input', 'change', 'click'].forEach(function (ev) { $('#L2').addEventListener(ev, function (e) { if (e.target.closest && e.target.closest('#widget') && (ev !== 'click' || e.target.closest('button, input, label'))) markPlayed(); }, true); }); // capture: a toy may redraw the button you pressed before the click gets here
+  ['input', 'change', 'click'].forEach(function (ev) {
+    $('#L2').addEventListener(ev, function (e) { // capture: a toy may redraw the button you pressed before the click gets here
+      if (!(e.target.closest && e.target.closest('#widget') && (ev !== 'click' || e.target.closest('button, input, label')))) return;
+      markPlayed();
+      var b = ev === 'click' && e.target.closest('button'), g = b && b.closest('.exs');
+      if (M && g && M.w.contains(g)) { var k = groupKey(M.w, g); (M.pressed[k] = M.pressed[k] || {})[$$('button', g).indexOf(b)] = 1; }
+      setTimeout(checkMissions, 0); // after the toy has redrawn
+    }, true);
+  });
+
+  // ---------- challenges: two or three things to make happen in each toy. They read what the toy shows, so a toy needs no code of its own for them. ----------
+  function vis(sel) { return function (w) { var e = w.querySelector(sel); return !!e && e.getClientRects().length > 0; }; }
+  function txt(sel, re) { return function (w) { var e = w.querySelector(sel); return !!e && e.getClientRects().length > 0 && re.test(e.textContent); }; }
+  function num(sel, re, test) { return function (w) { var e = w.querySelector(sel), m = e && re.exec(e.textContent); return !!m && test(+m[1], +m[2], +m[3]); }; }
+  function all(sel) { return function (w, m) { var g = w.querySelector(sel); return !!g && Object.keys(m.pressed[groupKey(w, g)] || {}).length >= g.querySelectorAll('button').length; }; }
+  function flipped(w, m) { return m.flipped; }
+  function val(w, sel) { var e = w.querySelector(sel); return e ? +e.value : NaN; }
+  var MISSIONS = {
+    tokens: [['Blow the 100-token budget', vis('#tk-meter.over')], ['Find text that needs a token for every two characters, or worse', function (w) { var b = w.querySelectorAll('#tk-stat b'); return b.length === 4 && +b[0].textContent >= 5 && +b[3].textContent <= 2; }]],
+    context: [['Make the model lose the codename', vis('#cx-verdict.bad')], ['Bring the codename back with a summary', function (w) { return vis('#cx-verdict.ok')(w) && vis('#cx-chat .msg.sum')(w); }]],
+    nexttoken: [['Pick 20 times or more and get the same word every time', num('#nt-sum', /^(\d+) picks?, 1 different/, function (n) { return n >= 20; })], ['Get five different words', num('#nt-sum', /(\d+) different/, function (n) { return n >= 5; })]],
+    training: [['Ask about a word it never saw', txt('#tr-out', /not in its training text/)], ['Change the text and catch the model not noticing', txt('#tr-state', /text changed since training/)]],
+    wrong: [['Catch it inventing an answer', txt('#wr-verdict', /Invented/)], ['Get an honest answer to something the page does not say', txt('#wr-verdict', /Honest/)]],
+    parts: [['Build a prompt that scores 6 of 6', txt('#pt-score', /6 of 6/)]],
+    narrow: [['Tick every adjective and count what is left', function (w) { var t = $$('[data-tell]', w); return t.length > 0 && t.every(function (x) { return x.checked; }); }], ['Narrow it to one reading', txt('#nw-count', /^1 of/)]],
+    rolepick: [['Hear all four voices', all('#rp-tabs')]],
+    formatpick: [['Find a format a program cannot read', txt('#fp-checks', /parser stopped/)], ['Get JSON that parses', txt('#fp-checks', /parsed \d+ items/)]],
+    iterate: [['Pass all four test cases', txt('#it-count', /4 of 4/)], ['Cause a regression', txt('#it-log', /regression/i)]],
+    sandbox: [['Score 6 of 6', txt('#sb-score', /6 of 6/)], ['Set off the real-data warning', vis('#sb-alarm')]],
+    tooluse: [['Make it answer without the tool it needs', vis('#tu-verdict.bad')], ['Ask something that needs no tool', txt('#tu-verdict', /No tool was needed/)]],
+    loop: [['Run it to a finish with the tests passing', vis('#lp-verdict.ok')], ['Stop it with the work half done', txt('#lp-verdict', /half-done/)]],
+    planning: [['Put the steps in an order that works', vis('#pl-order.ok')], ['Approve only where it matters', vis('#pl-gate.ok')], ['Make yourself the bottleneck', txt('#pl-gate', /bottleneck/)]],
+    memory: [['Get a stale answer', txt('#mm-verdict', /Stale/)], ['Set off the secret warning', vis('#mm-secret')]],
+    chain: [['Keep each step at 95 in 100 or better, and still fall below 50%', function (w) { return val(w, '#ch-p') >= 95 && parseFloat(($('#ch-out b', w) || {}).textContent) < 50; }], ['Lift a job of 20 steps or more above 90%', function (w) { return val(w, '#ch-n') >= 20 && parseFloat(($('#ch-out b', w) || {}).textContent) >= 90; }]],
+    terms: [['Look up all six words', all('#tm-pick')]],
+    gates: [['Let it build the wrong thing', vis('#gt-verdict.bad')], ['Get it right by luck, with no record', txt('#gt-verdict', /luck/)]],
+    whodoes: [['Sort every task in one phase', function (w) { var n = $$('#wd-body fieldset', w).length; return n > 0 && $$('#wd-body input:checked', w).length === n; }]],
+    claims: [['Judge every statement', num('#cl-score', /of (\d+) right so far, out of (\d+)/, function (a, b) { return a === b; })]],
+    rehearse: [['Write your own answer, then compare it with the sample', function (w) { var e = w.querySelector('#rh-sample'); return !!e && e.textContent.trim().length > 0; }]]
+  };
+  var M = null; // the toy on screen: its lesson, its challenges, what has been pressed, and how its verdicts stood
+  function groupKey(w, g) { return g.id || 'g' + $$('.exs', w).indexOf(g); }
+  function verdicts(w) { return $$('.verdict', w).map(function (v) { return v.classList.contains('ok') ? 'o' : v.classList.contains('bad') ? 'b' : '-'; }); }
+  function initMissions(cid, name, w) {
+    var list = MISSIONS[name], g;
+    if (!list) { // a toy with no challenges written for it still gets what can be told from the outside
+      list = []; g = w.querySelector('.exs');
+      if (w.querySelector('.verdict')) list.push(['Turn a verdict around: from good to bad, or back', flipped]);
+      if (g && g.querySelectorAll('button').length >= 3) list.push(['Try every choice in the first row', all('.exs')]);
+    }
+    M = { cid: cid, w: w, list: list, pressed: {}, flipped: false, sig: verdicts(w) };
+    renderMissions();
+  }
+  function renderMissions() {
+    var box = $('#missions'); if (!box || !M) return;
+    var f = S.found[M.cid] || [], n = M.list.filter(function (x, i) { return f[i]; }).length, done = n === M.list.length;
+    box.hidden = !M.list.length;
+    box.innerHTML = M.list.length ? '<div class="mhead"><span class="label">Can you…</span><span class="tag' + (done ? ' go' : '') + '">' + (done ? 'all found' : n + ' of ' + M.list.length) + '</span></div><ul>' +
+      M.list.map(function (x, i) { return '<li class="' + (f[i] ? 'ok' : '') + '"><i aria-hidden="true">' + (f[i] ? '✓' : '') + '</i>' + esc(x[0]) + '<span class="sr">' + (f[i] ? ', found' : '') + '</span></li>'; }).join('') + '</ul>' : '';
+  }
+  function checkMissions() {
+    if (!M || S.pos.space !== 'learn' || S.pos.zoom !== 2 || M.cid !== S.pos.concept || !document.contains(M.w)) return;
+    var s = verdicts(M.w), f = S.found[M.cid] || (S.found[M.cid] = []), hit = -1, i;
+    if (s.length === M.sig.length) for (i = 0; i < s.length; i++) if ((s[i] === 'o' && M.sig[i] === 'b') || (s[i] === 'b' && M.sig[i] === 'o')) M.flipped = true;
+    M.sig = s;
+    M.list.forEach(function (x, k) { if (!f[k] && x[1](M.w, M)) { f[k] = true; hit = k; } });
+    if (hit < 0) return;
+    save(); renderMissions(); snd('found'); burst($$('#missions li')[hit], 'var(--ok)', 10);
+    if (M.list.every(function (x, k) { return f[k]; })) toast('All found');
+  }
+
+  // ---------- sound: off unless you turn it on in the Menu. A few soft notes made in the browser; no files. ----------
+  var AC = null;
+  function snd(kind) {
+    if (!S.sound) return;
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      var t = AC.currentTime, notes = { ok: [660, 880], bad: [196], found: [523, 659, 784], level: [523, 659, 784, 1047] }[kind] || [440];
+      notes.forEach(function (hz, i) {
+        var o = AC.createOscillator(), g = AC.createGain(), at = t + i * 0.09;
+        o.type = kind === 'bad' ? 'triangle' : 'sine'; o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(0.07, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+        o.connect(g); g.connect(AC.destination); o.start(at); o.stop(at + 0.26);
+      });
+    } catch (e) { /* no audio here: stay silent */ }
+  }
+  function fillRange(el) { var lo = +el.min || 0, hi = el.max === '' ? 100 : +el.max; el.style.setProperty('--v', (hi > lo ? (el.value - lo) / (hi - lo) * 100 : 0).toFixed(1) + '%'); } // how far along a slider is, for its coloured track
 
   // ---------- small celebrations: a burst of dots, a number that floats up. Skipped when reduced motion is on. ----------
   var calm = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
@@ -411,7 +499,7 @@
     var q = QSETS[Q.sid][Q.i]; if (i >= q.opts.length) return;
     var ok = i === q.a, g = 0; Q.picked = i; Q.res[Q.i] = ok; if (ok) Q.right++; Q.combo = ok ? (Q.combo || 0) + 1 : 0;
     if (!S.cards[q.id]) { grade(q.id, ok ? 4 : 1); g = ok ? 5 : 1; addXp(g); Q.gain = (Q.gain || 0) + g; Q.added = (Q.added || 0) + 1; } // only the first sight of a question makes a card and earns XP
-    renderQuiz(true); renderChips();
+    renderQuiz(true); renderChips(); snd(ok ? 'ok' : 'bad');
     var hit = $(Q.box + ' .opt.right'); if (ok) burst(hit, 'var(--ok)', 10); if (g) flyXp(ok ? hit : $(Q.box + ' .opt.wrong'), g);
   }
   function nextQ() {
@@ -438,7 +526,7 @@
     var g = ''; [10, 20, 30, 45, 60].forEach(function (m) { g += '<label><input type="radio" name="m-goal" value="' + m + '"' + (m === S.goal ? ' checked' : '') + ' aria-label="' + m + ' minutes"><span>' + m + '</span></label>'; });
     $('#menu').innerHTML = '<h3>Go to</h3><div class="row"><button type="button" class="btn" data-m="map">Learning map' + kbd('M') + '</button>' + (RO ? '<button type="button" class="btn" data-m="roles">Roles tree' + kbd('T') + '</button>' : '') + (WIDGETS.sandbox ? '<button type="button" class="btn" data-m="sandbox">Prompt sandbox' + kbd('S') + '</button>' : '') + '</div>' +
       '<h3>Daily goal</h3><div class="row"><div class="segctl" id="m-goal" role="radiogroup" aria-label="Daily goal">' + g + '</div><span class="muted" style="font-size:13px">minutes</span></div>' +
-      '<h3>Look</h3><div class="row"><button type="button" class="btn" data-m="theme">Theme: ' + (S.theme || 'auto') + '</button></div>' +
+      '<h3>Look and sound</h3><div class="row"><button type="button" class="btn" data-m="theme">Theme: ' + (S.theme || 'auto') + '</button><button type="button" class="btn" data-m="sound" aria-pressed="' + !!S.sound + '">Sound: ' + (S.sound ? 'on' : 'off') + '</button></div>' +
       '<h3>Your progress</h3><p class="muted" style="margin:0;font-size:13px">Kept in this browser only. Save a copy to a file to move it or keep it safe.</p>' +
       '<div class="row"><button type="button" class="btn" data-m="save">Save to file</button><button type="button" class="btn" data-m="load">Load from file</button><button type="button" class="btn warn" data-m="reset">' + (resetArmed ? 'Press again to erase it all' : 'Reset progress') + '</button></div>' + (menuMsg ? '<p class="muted" style="margin:0;font-size:13px" role="status" id="m-msg">' + esc(menuMsg) + '</p>' : '') +
       '<h3>Keys</h3><div class="row"><button type="button" class="btn" data-m="keys">Keyboard shortcuts' + kbd('?') + '</button></div>' +
@@ -492,7 +580,7 @@
     box.innerHTML = '<div class="sheet"><div class="sheethead"><h2 class="kicker" id="rv-title">Review · card ' + (R.i + 1) + ' of ' + R.ids.length + '</h2>' + segs(shown) + close + '</div><div class="card"><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, R.picked, 'data-ropt', focus) + tail + '</div></div>';
     if (focus) { var f = R.picked === null ? $('.q', box) : $('[data-g="4"]', box) || $('[data-g="1"]', box); if (f) f.focus(); }
   }
-  function rpick(i) { if (R && R.picked === null && R.i < R.ids.length && i < QINDEX[R.ids[R.i]].opts.length) { R.picked = i; renderReview(true); if (i === QINDEX[R.ids[R.i]].a) burst($('#review .opt.right'), 'var(--ok)', 10); } }
+  function rpick(i) { if (R && R.picked === null && R.i < R.ids.length && i < QINDEX[R.ids[R.i]].opts.length) { R.picked = i; renderReview(true); snd(i === QINDEX[R.ids[R.i]].a ? 'ok' : 'bad'); if (i === QINDEX[R.ids[R.i]].a) burst($('#review .opt.right'), 'var(--ok)', 10); } }
   function rgrade(g) { if (!R || R.picked === null) return; var id = R.ids[R.i]; grade(id, g); addXp(2); R.gain += 2; R.i++; R.picked = null; renderReview(true); renderChips(); }
 
   // The sandbox keeps the names you list (to warn about them) in this browser. They are left out of the Save file.
@@ -590,6 +678,7 @@
   var MARKED = '.on, .cur, .here, [aria-pressed="true"], [aria-current]';
   function itemsOf(g) { return $$(ITEMS, g).filter(function (x) { return x.closest(GROUPS) === g; }); }
   function rove() {
+    $$('.widget input[type=range]').forEach(fillRange);
     $$(GROUPS).forEach(function (g) {
       var it = itemsOf(g); if (!it.length) return;
       var a = document.activeElement, cur = it.indexOf(a) >= 0 ? a : it.filter(function (x) { return x.getAttribute('tabindex') === '0'; })[0] || it.filter(function (x) { return x.matches(MARKED); })[0] || it[0];
@@ -687,7 +776,7 @@
     if (b.id === 'c-menu') return toggleMenu();
   });
   function goContinue() { var nx = nextLesson(); if (nx) act(function () { goLesson(nx); }); }
-  function toggleMenu() { var m = $('#menu'); if (m.hidden) { renderMenu(); m.hidden = false; rove(); var f = $('button', m); if (f) f.focus(); } else return closeMenu(true); $('#c-menu').setAttribute('aria-expanded', 'true'); }
+  function toggleMenu() { var m = $('#menu'); if (m.hidden) { renderMenu(); m.hidden = false; var f = $('button', m); if (f) f.focus(); rove(); } else return closeMenu(true); $('#c-menu').setAttribute('aria-expanded', 'true'); }
   function closeMenu(refocus) { var m = $('#menu'); if (!m.hidden) { m.hidden = true; $('#c-menu').setAttribute('aria-expanded', 'false'); if (refocus) $('#c-menu').focus(); } }
   $('#menu').addEventListener('focusout', function (e) { var to = e.relatedTarget; if (to && !$('#menu').contains(to) && to.id !== 'c-menu') closeMenu(); }); // Tab out of the menu and it closes behind you
   function menuAct(a) {
@@ -697,6 +786,7 @@
     if (a === 'sandbox') { $('#c-menu').focus(); closeMenu(); return openSandbox(); } // focus first: closing the sheet hands it back to the Menu button
     if (a === 'keys') { $('#c-menu').focus(); closeMenu(); return openKeys(); }
     if (a === 'theme') cycleTheme();
+    else if (a === 'sound') { S.sound = !S.sound; save(); snd('found'); }
     else if (a === 'save') {
       var out = Object.assign({}, S, { names: [], saved: new Date().toISOString() }); // the names you listed for the sandbox stay out of the file
       var blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), x = document.createElement('a');
@@ -706,7 +796,7 @@
     else if (a === 'reset') { if (!resetArmed) { resetArmed = true; renderMenu(); rove(); $('[data-m="reset"]').focus(); setTimeout(function () { resetArmed = false; if (!$('#menu').hidden && $('[data-m="reset"]')) { var had = document.activeElement === $('[data-m="reset"]'); renderMenu(); rove(); if (had) $('[data-m="reset"]').focus(); } }, 4000); return; } resetArmed = false; S = fresh(); try { localStorage.removeItem(KEY); } catch (e) { /* nothing stored */ } Q = null; applyTheme(); applyRead(); $('#L2').dataset.key = ''; renderAll(); menuMsg = 'Progress erased.'; }
     renderMenu(); rove(); var again = $('[data-m="' + a + '"]'); if (again) again.focus();
   }
-  document.addEventListener('input', function (e) { if (F && e.target.id === 'fd-in') findDraw(e.target.value); });
+  document.addEventListener('input', function (e) { if (F && e.target.id === 'fd-in') findDraw(e.target.value); if (e.target.type === 'range') fillRange(e.target); });
   document.addEventListener('change', function (e) {
     if (e.target.name === 'm-goal') { S.goal = +e.target.value; save(); renderChips(); }
     if (e.target.id === 'm-file' && e.target.files[0]) {
