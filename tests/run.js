@@ -679,6 +679,121 @@ await page.check('#widget [data-task="t4"][data-size="s"]');
 ok((await page.locator('#rt-verdict').getAttribute('class')).includes('bad') && /Meeting actions/.test(await text(page, '#rt-verdict')) && await D(page, () => document.activeElement.dataset.task === 't4' && document.activeElement.dataset.size === 's'), 'model size: moving one job down to a size that misses the bar is flagged, and focus stays');
 }
 
+  // ---------- risk ----------
+  section('Track 6: Risk and governance');
+  const riskShape = await D(page, () => {
+    const t = ACADEMY.tracks.find(x => x.id === 'risk'), L = t.concepts.filter(c => ACADEMY.lessons[c.id]).map(c => ACADEMY.lessons[c.id]);
+    const pos = [0, 0, 0, 0]; L.forEach(l => l.quiz.forEach(q => pos[q.a]++));
+    const body = JSON.stringify(L);
+    return { n: L.length, widgets: L.map(l => l.widget), pos, names: /ChatGPT|Copilot|Gemini|Claude|OpenAI|Anthropic|Avianca|Air Canada|Moffatt|Levidow|Schwartz|LoDuca/.test(body), dash: /—|–/.test(body) };
+  });
+  eq(riskShape.n, 6, 'track 6 has six lessons: data leakage, IP, hallucination risk, bias, injection design, people in the loop');
+  eq(riskShape.widgets, ['datasort', 'authorship', 'checkmatch', 'groupgap', 'breaktrifecta', 'reviewdesign'], 'track 6: each lesson has its own picture');
+  eq(riskShape.pos, [6, 6, 6, 6], 'track 6: the right answers sit evenly in all four places');
+  ok(!riskShape.names && !riskShape.dash, 'track 6: no tool, company, court party or lawyer is named in a lesson, and no dashes');
+
+  // data leakage: a ladder of tools, eight pieces of data
+  await goLesson(page, 'risk', 'leak');
+  eq(await page.locator('#ds-body fieldset').count(), 8, 'data leakage: eight pieces of data to sort');
+  eq(await D(page, () => { const n = {}; ACADEMY.lessons.leak.cards.forEach(c => { n[c.to] = (n[c.to] || 0) + 1; }); return [n.open, n.approved, n.inside, n.none]; }), [2, 2, 2, 2], 'data leakage: two pieces of data belong in each rung of the ladder');
+  const dsVerdict = i => page.locator('#ds-body fieldset').nth(i).locator('.verdict');
+  await page.check('#widget [data-card="c1"][data-b="open"]');
+  ok((await dsVerdict(0).getAttribute('class')).includes('ok') && /1 of 1/.test(await text(page, '#ds-score')), 'data leakage: public text in an open tool matches my sorting');
+  await page.check('#widget [data-card="c8"][data-b="open"]');
+  ok((await dsVerdict(7).getAttribute('class')).includes('bad') && /1 of 2/.test(await text(page, '#ds-score')) && /1 goes further than I would/.test(await text(page, '#ds-score')), 'data leakage: keys in an open tool is flagged as going further than I would');
+  await page.check('#widget [data-card="c2"][data-b="inside"]');
+  const stricter = await dsVerdict(1).getAttribute('class');
+  ok(!stricter.includes('ok') && !stricter.includes('bad') && /stricter than I would need/.test(await text(page, '#ds-body fieldset:nth-of-type(2)')), 'data leakage: a stricter choice is called safe but more than needed, not wrong');
+  ok(/1 of 3/.test(await text(page, '#ds-score')) && await D(page, () => document.activeElement.dataset.card === 'c2'), 'data leakage: only exact matches count, and focus stays on the choice you made');
+
+  // IP: what could the person claim?
+  await goLesson(page, 'risk', 'ip');
+  eq(await D(page, () => { const n = {}; ACADEMY.lessons.ip.cards.forEach(c => { n[c.to] = (n[c.to] || 0) + 1; }); return [n.none, n.part, n.all]; }), [2, 3, 1], 'IP: two cases give nothing, three give the person\'s own part, one gives the whole work');
+  await page.check('#widget [data-card="a1"][data-b="none"]');
+  ok((await page.locator('#au-body fieldset').nth(0).locator('.verdict').getAttribute('class')).includes('ok'), 'IP: a re-run prompt with the best image kept gives nothing in the generated part');
+  await page.check('#widget [data-card="a6"][data-b="part"]');
+  ok((await page.locator('#au-body fieldset').nth(5).locator('.verdict').getAttribute('class')).includes('bad') && /The whole work/.test(await text(page, '#au-body fieldset:nth-of-type(6)')) && /1 of 2/.test(await text(page, '#au-score')), 'IP: a different choice is shown my sorting and the reason');
+
+  // hallucination risk: match a check to the job
+  await goLesson(page, 'risk', 'halluc');
+  eq(await D(page, () => [WIDGETS._cleanSample(20, 3, 5), WIDGETS._cleanSample(20, 3, 18), WIDGETS._cleanSample(20, 0, 5)].map(x => +x.toFixed(3))), [0.399, 0, 1], 'hallucination risk: a sample of 5 from 20 misses all 3 wrong items about 40 times in 100, and certainly misses none if it covers 18');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('ok'), 'hallucination risk: using your own notes as they are fits the job');
+  await page.click('#widget [data-s="team"]');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('bad') && /Too light/.test(await text(page, '#cm-verdict')) && /3 wrong claims/.test(await text(page, '#cm-stat')), 'hallucination risk: trusting a team summary is too light, and 3 wrong claims go through');
+  await page.check('#widget [data-c="sample"]');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('ok') && /1\.2 wrong claims/.test(await text(page, '#cm-stat')) && /5 minutes/.test(await text(page, '#cm-stat')) && /40 times in 100/.test(await text(page, '#cm-note')), 'hallucination risk: a sample fits a team summary, with 1.2 wrong claims expected through and the 40-in-100 miss shown');
+  ok(await page.locator('#widget [data-c="outcome"]').isDisabled(), 'hallucination risk: there is nothing to run for a text summary');
+  await page.click('#widget [data-s="customer"]');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('bad') && /held to what it said/.test(await text(page, '#cm-verdict')), 'hallucination risk: a sample is too light for answers published to customers');
+  await page.check('#widget [data-c="signoff"]');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('ok') && /30 minutes/.test(await text(page, '#cm-stat')), 'hallucination risk: every claim plus a second person fits customer answers and takes 30 minutes');
+  await page.click('#widget [data-s="code"]'); await page.check('#widget [data-c="outcome"]');
+  ok((await page.locator('#cm-verdict').getAttribute('class')).includes('ok') && /6 minutes/.test(await text(page, '#cm-stat')), 'hallucination risk: running the code change fits and takes 6 minutes');
+  await page.check('#widget [data-c="all"]');
+  ok(/40 minutes/.test(await text(page, '#cm-stat')) && /6 minutes, not 40/.test(await text(page, '#cm-verdict')), 'hallucination risk: reading every line also fits but is slower than running it');
+  await page.click('#widget [data-s="own"]');
+  const heavy = await page.locator('#cm-verdict').getAttribute('class');
+  ok(!heavy.includes('ok') && !heavy.includes('bad') && /More than this job needs/.test(await text(page, '#cm-verdict')), 'hallucination risk: checking every item of your own notes is more than the job needs');
+  await page.click('#widget [data-s="code"]'); await page.check('#widget [data-c="outcome"]'); await page.click('#widget [data-s="team"]');
+  ok(await page.isChecked('#widget [data-c="all"]') && await D(page, () => document.activeElement.dataset.s === 'team'), 'hallucination risk: when a choice stops being possible it falls back to checking every item, and focus stays on the job');
+
+  // bias: results by group
+  await goLesson(page, 'risk', 'bias');
+  eq(await D(page, () => [WIDGETS._overall(95, 72, 10), WIDGETS._overall(95, 72, 50)].map(x => +x.toFixed(1))), [92.7, 83.5], 'bias: the overall score is a weighted average of the groups');
+  ok(/92\.7%/.test(await text(page, '#gg-note')) && /72%/.test(await text(page, '#gg-note')), 'bias: with group B at 10% of the test the overall score looks fine and hides a 23-point gap');
+  eq(await D(page, () => [...document.querySelectorAll('#gg-bars .bar i')].map(i => i.style.width)), ['92.7%', '95%', '72%'], 'bias: three bars: overall, group A and group B');
+  await setRange(page, '#gg-share', 50);
+  ok(/83\.5%/.test(await text(page, '#gg-note')), 'bias: with group B at half of the test the same tool scores 83.5% overall');
+  ok((await page.locator('#gg-verdict').getAttribute('class')).includes('bad') && /0\.60/.test(await text(page, '#gg-ratio')), 'bias: 24 of 100 against 40 of 100 is 0.60 of the other group\'s rate, under four-fifths');
+  await setRange(page, '#gg-b', 31);
+  ok((await page.locator('#gg-verdict').getAttribute('class')).includes('bad'), 'bias: 31 against 40 is 0.78, still under four-fifths');
+  await setRange(page, '#gg-b', 32);
+  ok((await page.locator('#gg-verdict').getAttribute('class')).includes('ok') && /0\.80/.test(await text(page, '#gg-ratio')) && /not proof of fairness/.test(await text(page, '#gg-verdict')), 'bias: 32 against 40 is exactly 0.80, not flagged, and the lesson says that is not proof of fairness');
+
+  // injection design: break the trifecta
+  await goLesson(page, 'risk', 'inject');
+  eq(await D(page, () => WIDGETS._legs([{ id: 'a', leg: 'private' }, { id: 'b', leg: 'untrusted' }, { id: 'c', leg: 'outward' }, { id: 'd', leg: 'outward' }], { c: 'approval', d: 'off' })), { private: 'open', untrusted: 'open', outward: 'guarded' }, 'injection design: a leg is open, guarded by approval, or closed');
+  ok((await page.locator('#bt-verdict').getAttribute('class')).includes('bad') && /trifecta is complete/.test(await text(page, '#bt-verdict')), 'injection design: with every ability on, the trifecta is complete');
+  await page.check('#widget [data-ab="send"][data-v="off"]');
+  ok((await page.locator('#bt-verdict').getAttribute('class')).includes('ok') && /broken/.test(await text(page, '#bt-verdict')) && /Way to send things out: closed/.test(await text(page, '#bt-legs')), 'injection design: switching off sending breaks it and the email helper still does its job');
+  await page.check('#widget [data-ab="send"][data-v="approval"]');
+  const guarded = await page.locator('#bt-verdict').getAttribute('class');
+  ok(!guarded.includes('ok') && !guarded.includes('bad') && /You can close/.test(await text(page, '#bt-verdict')) && /a person approves/.test(await text(page, '#bt-legs')), 'injection design: approval on sending only guards a leg, and the picture says a leg could be closed instead');
+  await page.click('#widget [data-s="coder"]');
+  ok((await page.locator('#bt-verdict').getAttribute('class')).includes('bad'), 'injection design: the coding helper starts with all three legs open');
+  await page.check('#widget [data-ab="net"][data-v="off"]');
+  ok((await page.locator('#bt-verdict').getAttribute('class')).includes('ok') && /Least privilege/.test(await text(page, '#bt-verdict')), 'injection design: closing the way out is the answer for the coding helper, and unused keys are still flagged');
+  await page.check('#widget [data-ab="net"][data-v="on"]'); await page.check('#widget [data-ab="issues"][data-v="off"]');
+  ok(/something the job needs/.test(await text(page, '#bt-verdict')) && !(await page.locator('#bt-verdict').getAttribute('class')).includes('ok'), 'injection design: closing a leg by switching off what the job needs is not a pass');
+  await page.check('#widget [data-ab="issues"][data-v="on"]');
+  await page.click('#widget [data-s="booking"]'); await page.check('#widget [data-ab="confirm"][data-v="approval"]');
+  ok(/Also switch off/.test(await text(page, '#bt-verdict')) && !(await page.locator('#bt-verdict').getAttribute('class')).includes('ok'), 'injection design: where all three legs are needed, approval alone is not enough while extras are on');
+  await page.check('#widget [data-ab="cards"][data-v="off"]'); await page.check('#widget [data-ab="pages"][data-v="off"]');
+  ok((await page.locator('#bt-verdict').getAttribute('class')).includes('ok') && /honest best/.test(await text(page, '#bt-verdict')) && await D(page, () => document.activeElement.dataset.ab === 'pages'), 'injection design: approval plus nothing extra is the honest best for the booking helper, and focus stays put');
+
+  // people in the loop: design a review
+  await goLesson(page, 'risk', 'human');
+  eq(await D(page, () => { const A = ACADEMY.lessons.human.actions; return [A.length, A.filter(a => a.wrong).length, A.filter(a => a.wrong && (a.out || !a.undo)).length, A.filter(a => a.out || !a.undo).length]; }), [20, 5, 3, 7], 'review: twenty actions, five wrong, three of those costly, seven that go outside or cannot be undone');
+  eq(await D(page, () => {
+    const L = ACADEMY.lessons.human, f = (r, s) => { const x = WIDGETS._review(L, r, s); return [x.asked, x.caught, x.costlyMissed, x.rows.map(y => y.outcome)]; };
+    return [f('none', 'bare'), f('all', 'bare'), f('all', 'plain'), f('all', 'evidence'), f('risky', 'bare'), f('risky', 'plain'), f('risky', 'evidence')];
+  }), [
+    [0, 0, 3, ['unasked', 'unasked', 'unasked', 'unasked', 'unasked']],
+    [20, 0, 3, ['unseen', 'skimmed', 'skimmed', 'skimmed', 'skimmed']],
+    [20, 1, 3, ['caught', 'skimmed', 'skimmed', 'skimmed', 'skimmed']],
+    [20, 1, 3, ['caught', 'skimmed', 'skimmed', 'skimmed', 'skimmed']],
+    [7, 0, 3, ['unasked', 'unseen', 'unseen', 'unasked', 'unseen']],
+    [7, 1, 2, ['unasked', 'unseen', 'caught', 'unasked', 'unseen']],
+    [7, 3, 0, ['unasked', 'caught', 'caught', 'unasked', 'caught']]
+  ], 'review: nobody asked, ask about everything, or ask about the risky seven, each with three screens, gives the scripted catches');
+  ok((await page.locator('#rv-verdict').getAttribute('class')).includes('bad') && /skim/.test(await text(page, '#rv-verdict')) && await page.locator('#rv-queue .pk').count() === 20, 'review: asking about everything with a bare "Approve?" catches nothing, and 20 prompts are too many to read');
+  await page.check('#widget [data-rule="risky"]'); await page.check('#widget [data-show="plain"]');
+  ok(/screen did not show the problem/.test(await text(page, '#rv-verdict')) && /2 costly mistakes/.test(await text(page, '#rv-verdict')), 'review: with plain words only, the subtle wrong actions still go out');
+  await page.check('#widget [data-show="evidence"]');
+  ok((await page.locator('#rv-verdict').getAttribute('class')).includes('ok') && /Every costly mistake was caught/.test(await text(page, '#rv-verdict')) && await page.locator('#rv-queue .pk').count() === 7 && /based on/.test(await text(page, '#rv-queue')), 'review: asking only about the risky seven and showing the evidence catches all three costly mistakes');
+  await page.check('#widget [data-rule="none"]');
+  ok(/Nobody is asked/.test(await text(page, '#rv-queue')) && (await page.locator('#rv-verdict').getAttribute('class')).includes('bad') && await D(page, () => document.activeElement.dataset.rule === 'none'), 'review: with nobody asked, everything goes out, and focus stays on the choice');
+
   // @@TRACK-TESTS (new tracks add their checks above this line)
 
   // ------------------------------------------------------------------ sandbox

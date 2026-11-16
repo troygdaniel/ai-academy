@@ -9,7 +9,13 @@ Read `PLAN.md` first (one page). Facts and what is checked: `content/SOURCES.md`
 - **Track 1, How models work** (5 lessons): tokens, the context window, next token and temperature, training vs using, sure and wrong.
 - **Track 2, Prompting** (6 lessons): the parts of a prompt, examples, roles, format, iterating, judging a prompt.
 - **Track 3, Tools and agents** (5 lessons): tool use, the agent loop, planning, memory, where agents fail.
-- **Track 9, Agile x AI** (6 lessons): AI-DLC, the AI-driven development life cycle that AWS published. Why a new life cycle, plan-ask-validate-build and its gates, three phases and who does what, bringing a team along, what the evidence says (and does not), and a rehearsal where you write your own answer before seeing a sample. Sourced from AWS's own post and the open tooling docs; what could not be checked is marked **verify** in `content/SOURCES.md`.
+- **Track 4, Grounding** (4 lessons): embeddings, search, RAG, citations.
+- **Track 5, Evals and quality** (4 lessons): test sets, rubrics, model judges and their biases, regressions.
+- **Track 6, Risk and governance** (6 lessons): data leakage, IP and ownership, hallucination risk, bias and fairness, injection and design defences, people in the loop. Generic teaching, not legal advice.
+- **Track 7, Cost and operations** (4 lessons): tokens as cost, latency, caching, choosing a model size. All prices in the toys are made up.
+- **Track 8, Tools in practice** (4 lessons): a tool in your editor, in the terminal, one that takes a ticket and returns a pull request, and a six-question card for any tool you add.
+- **Track 9, Agile x AI** (9 lessons): AI-DLC, the AI-driven development life cycle that AWS published. Why a new life cycle, plan-ask-validate-build and its gates, three phases and who does what, stages and plans, rules and the audit trail, bringing a team along, the facilitator's first week, what the evidence says (and does not), and a rehearsal where you write your own answer before seeing a sample. Sourced from AWS's own post, the white paper and the open tooling docs.
+- Every claim has a source id in `content/SOURCES.md`, with how well each source was checked. Anything unchecked is marked **verify**.
 - Every lesson: one idea, one picture you can poke, four questions, Read more in big type (A- / A+), an Agile lens and an In practice line. About ten minutes each.
 - **Prompt sandbox** (Menu, the Map, or the `S` key): scores a prompt against a six-part rubric and warns when text looks like real data (emails, long digit runs, names). It never calls a model. The prompt is not saved; the names you list for it to watch for are kept in this browser only, and left out of the Save file.
 - **Roles family tree** (the switch at the top of the Map, or the `T` key): our own tree of AI-era roles, with the same zoom (Tree, Family, Role, Detail), a Read more for each role, and quiz cards. Inspired by Ian Miell's family tree of software job titles; none of his data is used.
@@ -20,13 +26,14 @@ Read `PLAN.md` first (one page). Facts and what is checked: `content/SOURCES.md`
 `-` `+` zoom · `1` to `4` answer · `Enter` next · `R` review · `M` map · `T` roles tree · `S` sandbox · `Esc` close. In a review, after a right answer: `1` Hard, `2` Good, `3` Easy.
 
 ## Not built yet
-Tracks 4 to 8 (outlined on the Map, greyed).
+Nothing outlined is left: all nine tracks have lessons (47 in all). Ideas for later: estimation and metrics, the culture models from Tribal Leadership and Reinventing Organizations, and more tools as they matter.
 
 ## Files
 - `index.html` the page
 - `style.css` the look (agentboard's tokens)
 - `content.js` the curriculum, the lessons and the roles tree: plain data, no code
-- `widgets.js` the pictures you can poke, and the sandbox scorer
+- `widgets.js` the pictures you can poke for tracks 1 to 3 and 9, and the sandbox scorer
+- `widgets-extra.js` the pictures for tracks 4 to 9 that came later (loads after `widgets.js`)
 - `app.js` state, zoom, quiz, review, Save / Load
 - `content/SOURCES.md` every source, and how well each was checked
 - `tests/run.js` the browser checks

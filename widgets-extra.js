@@ -1000,5 +1000,213 @@ WIDGETS.router = function (root, L) {
 };
 })();
 
+  // ---------- risk ----------
+  // Track 6, Risk and governance: six pictures. Everything here is a toy with hand-made numbers and scripted results.
+  // The names that start with "risk" are helpers private to this track.
+
+  // ---- one sorting picture, used for data leakage (a ladder of tools) and for authorship (three bins) ----
+  function riskSort(root, L, key, p, ordered) {
+    var st = mem(key, { a: {} });
+    function idx(id) { for (var i = 0; i < L.buckets.length; i++) if (L.buckets[i].id === id) return i; return -1; }
+    function label(id) { return L.buckets[idx(id)].label; }
+    var head = L.buckets.map(function (b) {
+      var body = b.qa ? b.qa.map(function (q) { return '<b>' + esc(q[0]) + '</b> ' + esc(q[1]); }).join('<br>') : esc(b.desc || '');
+      return '<div class="card"><h3>' + esc(b.label) + '</h3><p>' + body + '</p></div>';
+    }).join('');
+    root.innerHTML = '<div class="two" id="' + p + '-buckets">' + head + '</div><p class="note" style="margin:12px 0 0">' + esc(L.ask) + '</p><div id="' + p + '-body"></div><p class="note" id="' + p + '-score" role="status"></p>';
+    function update() {
+      var right = 0, done = 0, loose = 0;
+      $('#' + p + '-body', root).innerHTML = L.cards.map(function (c) {
+        var pick = st.a[c.id], fb = '';
+        if (pick) {
+          done++;
+          if (pick === c.to) { right++; fb = '<p class="verdict ok">' + esc(c.why) + '</p>'; }
+          else if (ordered && idx(pick) > idx(c.to)) { fb = '<p class="verdict">Safe, but stricter than I would need. I would allow "' + esc(label(c.to)) + '". ' + esc(c.why) + '</p>'; }
+          else { if (ordered) loose++; fb = '<p class="verdict bad">' + (ordered ? 'This goes further than I would. ' : '') + 'I would sort this as "' + esc(label(c.to)) + '". ' + esc(c.why) + '</p>'; }
+        }
+        return '<fieldset class="seg" style="margin-top:10px"><legend>' + esc(c.text) + '</legend>' + L.buckets.map(function (b) {
+          return '<label><input type="radio" name="' + p + '-' + c.id + '" data-card="' + c.id + '" data-b="' + b.id + '"' + (pick === b.id ? ' checked' : '') + '> ' + esc(b.label) + '</label>';
+        }).join('') + fb + '</fieldset>';
+      }).join('');
+      $('#' + p + '-score', root).textContent = done
+        ? right + ' of ' + done + ' match my sorting' + (ordered && loose ? ', and ' + loose + (loose === 1 ? ' goes' : ' go') + ' further than I would' : '') + '. These are judgments, so a different answer with a reason is fine.'
+        : 'Sort each one, then read why.';
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset; if (!d.card) return;
+      st.a[d.card] = d.b; update(); $('[data-card="' + d.card + '"][data-b="' + d.b + '"]', root).focus();
+    });
+    update();
+  }
+  WIDGETS.datasort = function (root, L) { riskSort(root, L, 'risk-datasort', 'ds', true); };
+  WIDGETS.authorship = function (root, L) { riskSort(root, L, 'risk-authorship', 'au', false); };
+
+  // ---- match a check to the risk of a job ----
+  function riskClean(n, bad, k) { var p = 1, i; if (k > n - bad) return 0; for (i = 0; i < k; i++) p *= (n - bad - i) / (n - i); return p; } // chance a random sample of k misses every bad one
+  WIDGETS._cleanSample = riskClean;
+  WIDGETS.checkmatch = function (root, L) {
+    var st = mem('risk-checkmatch', { s: L.scenarios[0].id, c: 'trust' });
+    function sc() { return L.scenarios.filter(function (x) { return x.id === st.s; })[0]; }
+    function chk(id) { return L.checks.filter(function (x) { return x.id === id; })[0]; }
+    function fmt(x) { return Math.abs(x - Math.round(x)) < 0.05 ? String(Math.round(x)) : x.toFixed(1); }
+    // what a check costs and what slips through, for one job: a sample you accept when it is clean, and widen to everything when it is not
+    function calc(s, id) {
+      if (id === 'trust') return { slip: s.bad, min: 0 };
+      if (id === 'skim') return { slip: s.bad, min: 1 };
+      if (id === 'sample') return { slip: riskClean(s.n, s.bad, L.sample) * s.bad, min: L.sample * s.m, clean: riskClean(s.n, s.bad, L.sample) };
+      if (id === 'outcome') return s.outcome ? { slip: 0, min: s.om } : null;
+      if (id === 'all') return { slip: 0, min: s.n * s.m };
+      return { slip: 0, min: s.n * s.m + 10 };
+    }
+    WIDGETS._checkCalc = calc;
+    root.innerHTML = '<div class="exs" id="cm-pick"></div><p class="note" id="cm-stakes" style="margin:0 0 8px"></p><fieldset class="seg" id="cm-checks"></fieldset>' +
+      '<div class="stat" id="cm-stat" role="status"></div><p class="verdict" id="cm-verdict" role="status"></p><p class="note" id="cm-note"></p>';
+    function update() {
+      var s = sc(), c = chk(st.c), r;
+      if (!calc(s, st.c)) { st.c = 'all'; c = chk('all'); }
+      r = calc(s, st.c);
+      $('#cm-pick', root).innerHTML = L.scenarios.map(function (x) { return '<button type="button" data-s="' + x.id + '"' + (x.id === st.s ? ' class="on"' : '') + '>' + esc(x.label) + '</button>'; }).join('');
+      $('#cm-stakes', root).textContent = 'The draft has ' + s.n + ' ' + s.noun + ', and ' + s.bad + ' of them are wrong. ' + s.stakes;
+      $('#cm-checks', root).innerHTML = '<legend>How do you check it?</legend>' + L.checks.map(function (x) {
+        var off = !calc(s, x.id);
+        return '<label><input type="radio" name="cm-c" data-c="' + x.id + '"' + (st.c === x.id ? ' checked' : '') + (off ? ' disabled' : '') + '> ' + esc(x.label) + (off ? ' (nothing to run here: the claims themselves must be checked)' : '') + '</label>';
+      }).join('');
+      $('#cm-stat', root).innerHTML = '<span><b>' + fmt(r.slip) + '</b> wrong ' + esc(s.noun) + ' expected to get through</span><span><b>' + r.min + '</b> minutes</span>';
+      var cls, msg;
+      if (c.level < s.lo) { cls = 'bad'; msg = 'Too light for this job. About ' + fmt(r.slip) + ' wrong ' + s.noun + ' would get through. ' + s.lightWhy; }
+      else if (c.level > s.hi) { cls = ''; msg = 'More than this job needs. ' + s.heavyWhy; }
+      else { cls = 'ok'; msg = 'This fits the job. ' + s.fitWhy + (st.c === 'all' && s.outcome ? ' Reading every line works, but running it takes ' + s.om + ' minutes, not ' + r.min + '.' : ''); }
+      $('#cm-verdict', root).className = 'verdict' + (cls ? ' ' + cls : ''); $('#cm-verdict', root).textContent = msg;
+      $('#cm-note', root).textContent = st.c === 'sample'
+        ? 'A random sample of ' + L.sample + ' from ' + s.n + ' finds none of the ' + s.bad + ' wrong ones ' + Math.round(r.clean * 100) + ' times in 100. Then you accept the draft and they all stay in. If the sample does find one, you widen to every item.'
+        : (st.c === 'skim' ? 'Skimming catches nothing in this toy: wrong claims are written as fluently as right ones.' : '');
+    }
+    root.addEventListener('change', function (e) { var c = e.target.dataset.c; if (!c) return; st.c = c; update(); $('[data-c="' + c + '"]', root).focus(); });
+    onClick(root, function (d) { if (d.s === undefined) return; st.s = d.s; update(); $('[data-s="' + d.s + '"]', root).focus(); });
+    update();
+  };
+
+  // ---- break the lethal trifecta ----
+  WIDGETS._legs = function (abilities, state) { // 'open' if any ability in the leg is on, 'guarded' if only approvals remain, else 'closed'
+    var out = {};
+    ['private', 'untrusted', 'outward'].forEach(function (leg) {
+      var list = abilities.filter(function (a) { return a.leg === leg; }), on = list.filter(function (a) { return (state[a.id] || 'on') === 'on'; }).length, ap = list.filter(function (a) { return state[a.id] === 'approval'; }).length;
+      out[leg] = on ? 'open' : ap ? 'guarded' : 'closed';
+    });
+    return out;
+  };
+  WIDGETS.breaktrifecta = function (root, L) {
+    var LEGS = { private: 'Private data', untrusted: 'Untrusted content', outward: 'Way to send things out' };
+    var st = mem('risk-trifecta', { s: L.scenarios[0].id, v: {} });
+    function sc() { return L.scenarios.filter(function (x) { return x.id === st.s; })[0]; }
+    function vs(s) { return st.v[s.id] || (st.v[s.id] = {}); }
+    root.innerHTML = '<div class="exs" id="bt-pick"></div><p class="prompt" id="bt-job" style="font-size:16px"></p><div id="bt-body"></div><p class="legend" id="bt-legs" role="status"></p><p class="verdict" id="bt-verdict" role="status"></p>';
+    function update() {
+      var s = sc(), v = vs(s), legs = WIDGETS._legs(s.abilities, v), closed = [], coreOff = [], extras = [], closable = [], cls, msg;
+      $('#bt-pick', root).innerHTML = L.scenarios.map(function (x) { return '<button type="button" data-s="' + x.id + '"' + (x.id === st.s ? ' class="on"' : '') + '>' + esc(x.label) + '</button>'; }).join('');
+      $('#bt-job', root).textContent = 'Its job: ' + s.job;
+      $('#bt-body', root).innerHTML = s.abilities.map(function (a) {
+        var cur = v[a.id] || 'on', opts = [['on', 'On'], ['off', 'Off']];
+        if (a.leg === 'outward') opts.splice(1, 0, ['approval', 'Needs a person to approve']);
+        return '<fieldset class="seg" style="margin-top:8px"><legend>' + esc(a.text) + ' <span class="tag">' + (a.leg === 'none' ? 'not a leg' : esc(LEGS[a.leg])) + (a.core ? ', the job needs it' : '') + '</span></legend><div class="row" style="margin:0">' + opts.map(function (o) {
+          return '<label><input type="radio" name="bt-' + a.id + '" data-ab="' + a.id + '" data-v="' + o[0] + '"' + (cur === o[0] ? ' checked' : '') + '> ' + o[1] + '</label>';
+        }).join('') + '</div></fieldset>';
+      }).join('');
+      ['private', 'untrusted', 'outward'].forEach(function (k) { if (legs[k] === 'closed') closed.push(k); if (!s.abilities.some(function (a) { return a.leg === k && a.core; })) closable.push(k); });
+      s.abilities.forEach(function (a) { var cur = v[a.id] || 'on'; if (a.core && cur === 'off') coreOff.push(a.text.toLowerCase()); if (!a.core && cur !== 'off') extras.push(a.text.toLowerCase()); });
+      $('#bt-legs', root).innerHTML = ['private', 'untrusted', 'outward'].map(function (k) { return '<span><span class="tag' + (legs[k] === 'closed' ? ' go' : '') + '">' + LEGS[k] + ': ' + (legs[k] === 'guarded' ? 'open, but a person approves' : legs[k]) + '</span></span>'; }).join('');
+      if (closed.length) {
+        if (coreOff.length) { cls = ''; msg = 'The trifecta is broken, but you also switched off something the job needs (' + coreOff.join(', ') + '). Safe is not the goal on its own: find a leg you can close and still keep the job.'; }
+        else { cls = 'ok'; msg = 'The trifecta is broken. With "' + LEGS[closed[0]].toLowerCase() + '" closed, a planted instruction has no way to finish the attack, and the job still works.' + (extras.length ? ' Other abilities are still on (' + extras.join(', ') + '). Least privilege says to switch off what the job does not need.' : ''); }
+      } else if (legs.outward === 'guarded') {
+        if (coreOff.length) { cls = ''; msg = 'A person approves each send, but you also switched off something the job needs (' + coreOff.join(', ') + ').'; }
+        else if (closable.length) { cls = ''; msg = 'A person approving each send helps, but a tired approver can miss a planted instruction. You can close "' + LEGS[closable[0]].toLowerCase() + '" and keep the job. Try that instead.'; }
+        else if (extras.length) { cls = ''; msg = 'All three legs are needed for this job, so none can be closed and a person must approve each send. Also switch off what the job does not need (' + extras.join(', ') + ').'; }
+        else { cls = 'ok'; msg = 'All three legs are needed for this job, so none can be closed. A person approving each send, and nothing extra switched on, is the honest best here. It is only as strong as the person\'s attention, which the next lesson is about.'; }
+      } else { cls = 'bad'; msg = 'The trifecta is complete: private data, untrusted content and a way out are all open. ' + s.attack; }
+      $('#bt-verdict', root).className = 'verdict' + (cls ? ' ' + cls : ''); $('#bt-verdict', root).textContent = msg;
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset; if (!d.ab) return;
+      vs(sc())[d.ab] = d.v; update(); $('[data-ab="' + d.ab + '"][data-v="' + d.v + '"]', root).focus();
+    });
+    onClick(root, function (d) { if (d.s === undefined) return; st.s = d.s; update(); $('[data-s="' + d.s + '"]', root).focus(); });
+    update();
+  };
+
+  // ---- design a review: what is asked, what is shown, how often ----
+  WIDGETS._review = function (L, rule, show) { // which wrong actions a careful reader catches, and why the rest slip through
+    var lvl = { bare: 0, plain: 1, evidence: 2 }, asked = 0, rows = [];
+    L.actions.forEach(function (a, i) {
+      var prompted = rule === 'all' || (rule === 'risky' && (a.out || !a.undo)), pos = 0, outcome;
+      if (prompted) { asked++; pos = asked; }
+      if (!a.wrong) return;
+      outcome = !prompted ? 'unasked' : pos > L.F ? 'skimmed' : lvl[show] < a.see ? 'unseen' : 'caught';
+      rows.push({ n: i + 1, text: a.text, costly: !!(a.out || !a.undo), outcome: outcome });
+    });
+    return { asked: asked, rows: rows, caught: rows.filter(function (r) { return r.outcome === 'caught'; }).length, costlyMissed: rows.filter(function (r) { return r.costly && r.outcome !== 'caught'; }).length };
+  };
+  WIDGETS.reviewdesign = function (root, L) {
+    var st = mem('risk-review', { rule: 'all', show: 'bare' });
+    var WHY = { unasked: 'never asked', skimmed: 'asked, but after you had started to skim', unseen: 'asked, but the screen did not show the problem' };
+    function seen(a, n) { return st.show === 'bare' ? 'Step ' + n + ' of ' + L.actions.length + '. Approve?' : st.show === 'plain' ? a.text : a.text + ' (based on: ' + a.base + ')'; }
+    root.innerHTML = '<p class="prompt" style="font-size:16px">Today\'s task: ' + esc(L.task) + '</p>' +
+      '<fieldset class="seg" id="rv-rules"><legend>Which actions ask a person?</legend>' + L.rules.map(function (r) { return '<label><input type="radio" name="rv-rule" data-rule="' + r.id + '"> ' + esc(r.label) + '</label>'; }).join('') + '</fieldset>' +
+      '<fieldset class="seg" id="rv-shows" style="margin-top:10px"><legend>What does the person see on each prompt?</legend>' + L.shows.map(function (r) { return '<label><input type="radio" name="rv-show" data-show="' + r.id + '"> ' + esc(r.label) + '</label>'; }).join('') + '</fieldset>' +
+      '<p class="note" style="margin:12px 0 4px">Your review queue</p><div class="picks" id="rv-queue"></div><div class="stat" id="rv-stat" role="status"></div><ul id="rv-rows" style="margin:6px 0 0;padding-left:20px"></ul><p class="verdict" id="rv-verdict" role="status"></p>';
+    function update() {
+      var r = WIDGETS._review(L, st.rule, st.show), n = 0, q = '', miss = { unasked: 0, skimmed: 0, unseen: 0 }, cls, msg, parts = [];
+      $$('input[name="rv-rule"]', root).forEach(function (x) { x.checked = x.dataset.rule === st.rule; });
+      $$('input[name="rv-show"]', root).forEach(function (x) { x.checked = x.dataset.show === st.show; });
+      L.actions.forEach(function (a, i) { if (st.rule === 'all' || (st.rule === 'risky' && (a.out || !a.undo))) { n++; q += '<span class="pk">' + n + '. ' + esc(seen(a, i + 1)) + '</span>'; } });
+      $('#rv-queue', root).innerHTML = q || '<span class="muted">Nobody is asked anything.</span>';
+      $('#rv-stat', root).innerHTML = '<span><b>' + r.asked + '</b> prompts</span><span><b>' + Math.min(r.asked, L.F) + '</b> read closely</span><span><b>' + r.rows.length + '</b> wrong actions today</span><span><b>' + r.caught + '</b> caught</span>';
+      $('#rv-rows', root).innerHTML = r.rows.map(function (x) { return '<li>Step ' + x.n + ', ' + esc(x.text) + ' (' + (x.costly ? 'goes outside or cannot be undone' : 'cheap to undo') + '): ' + (x.outcome === 'caught' ? '<b>caught</b>' : 'slipped through, ' + WHY[x.outcome]) + '.</li>'; }).join('');
+      r.rows.forEach(function (x) { if (x.costly && x.outcome !== 'caught') miss[x.outcome]++; });
+      if (!r.costlyMissed) { cls = 'ok'; msg = 'Every costly mistake was caught, with ' + r.asked + ' prompts that a person can read. ' + (r.rows.length - r.caught) + ' cheap mistake' + (r.rows.length - r.caught === 1 ? '' : 's') + ' went through unasked. They can be undone, and a log or the tests can find them.'; }
+      else {
+        cls = 'bad';
+        if (miss.unasked) parts.push(miss.unasked + ' never asked');
+        if (miss.skimmed) parts.push(miss.skimmed + ' asked after you had started to skim (the toy reader reads ' + L.F + ' prompts closely)');
+        if (miss.unseen) parts.push(miss.unseen + ' asked, but the screen did not show the problem');
+        msg = r.costlyMissed + ' costly mistake' + (r.costlyMissed === 1 ? '' : 's') + ' still went out: ' + parts.join('; ') + '. ' +
+          (miss.skimmed ? 'Fewer prompts would be read better. ' : '') + (miss.unseen ? 'Show the action and the evidence behind it. ' : '') + (miss.unasked ? 'Ask about whatever goes outside or cannot be undone.' : '');
+      }
+      $('#rv-verdict', root).className = 'verdict ' + cls; $('#rv-verdict', root).textContent = msg;
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset, sel;
+      if (d.rule) { st.rule = d.rule; sel = '[data-rule="' + d.rule + '"]'; } else if (d.show) { st.show = d.show; sel = '[data-show="' + d.show + '"]'; } else return;
+      update(); $(sel, root).focus();
+    });
+    update();
+  };
+
+  // ---- look at results by group ----
+  WIDGETS._overall = function (a, b, shareB) { return a * (1 - shareB / 100) + b * (shareB / 100); };
+  WIDGETS.groupgap = function (root, L) {
+    var st = mem('risk-groupgap', { share: 10, b: 24 });
+    root.innerHTML = '<p class="note" style="margin:0 0 4px">Test 1: how well does the tool agree with past human decisions?</p>' +
+      '<div class="ctl"><label for="gg-share">Group B is <b id="gg-sv"></b> of the test set</label><input type="range" id="gg-share" min="5" max="50" step="5"></div>' +
+      '<div class="bars" id="gg-bars"></div><p class="note" id="gg-note" role="status"></p>' +
+      '<p class="note" style="margin:16px 0 4px">Test 2: who gets shortlisted? Group A: ' + L.rateA + ' of 100.</p>' +
+      '<div class="ctl"><label for="gg-b">Group B shortlisted <b id="gg-bv"></b> of 100</label><input type="range" id="gg-b" min="10" max="50" step="1"></div>' +
+      '<p class="big" id="gg-ratio" role="status"></p><p class="verdict" id="gg-verdict" role="status"></p>';
+    function bar(name, v) { return '<div class="bar"><span class="w">' + name + '</span><span class="track"><i style="width:' + v.toFixed(1) + '%"></i></span><span class="pc">' + v.toFixed(1) + '%</span><span class="tl"></span></div>'; }
+    function update() {
+      var o = WIDGETS._overall(L.accA, L.accB, st.share), flag = st.b * 5 < L.rateA * 4;
+      $('#gg-sv', root).textContent = st.share + '%'; $('#gg-bv', root).textContent = String(st.b);
+      $('#gg-bars', root).innerHTML = bar('Overall', o) + bar('Group A', L.accA) + bar('Group B', L.accB);
+      $('#gg-note', root).textContent = 'The overall number is ' + o.toFixed(1) + '%. Group B gets ' + L.accB + '%, ' + (L.accA - L.accB) + ' points lower, whatever the mix.';
+      $('#gg-ratio', root).innerHTML = '<b>' + (st.b / L.rateA).toFixed(2) + '</b> of group A\'s shortlisting rate';
+      $('#gg-verdict', root).className = 'verdict ' + (flag ? 'bad' : 'ok');
+      $('#gg-verdict', root).textContent = flag ? 'Under four-fifths (0.80). By the US rule of thumb, that is a signal to look closer at how the tool decides. It starts a question; it does not settle one.'
+        : 'At or above four-fifths. This check does not flag it. That is not proof of fairness: it is one simple lens, and it says nothing about why the rates are what they are.';
+    }
+    $('#gg-share', root).value = st.share; $('#gg-b', root).value = st.b;
+    root.addEventListener('input', function (e) { if (e.target.id === 'gg-share') st.share = +e.target.value; else if (e.target.id === 'gg-b') st.b = +e.target.value; else return; update(); });
+    update();
+  };
+
   // @@WIDGETS (new pictures are added above this line)
 })();
