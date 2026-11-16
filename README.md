@@ -13,6 +13,7 @@ Read `PLAN.md` first (one page). Facts and what is checked: `content/SOURCES.md`
 - Every lesson: one idea, one picture you can poke, four questions, Read more in big type (A- / A+), an Agile lens and an In practice line. About ten minutes each.
 - **Prompt sandbox** (Menu, the Map, or the `S` key): scores a prompt against a six-part rubric and warns when text looks like real data (emails, long digit runs, names). It never calls a model. The prompt is not saved; the names you list for it to watch for are kept in this browser only, and left out of the Save file.
 - **Roles family tree** (the switch at the top of the Map, or the `T` key): our own tree of AI-era roles, with the same zoom (Tree, Family, Role, Detail), a Read more for each role, and quiz cards. Inspired by Ian Miell's family tree of software job titles; none of his data is used.
+- **Find** (the `/` key or the button at the top): type a few letters and jump to any lesson, track, role or action.
 - **Spaced review** (SM-2): every quiz question becomes a card; Review runs the due ones.
 - Streak, daily goal ring (minutes you actually study), XP and levels, shown as gauges on the Map. Light and dark. Keyboard throughout, reduced motion respected. Built for desktop; phone width is not a goal.
 
@@ -28,7 +29,10 @@ Everything works without a mouse. Press `?` for the full list.
 | `Esc` | Close a sheet or the Menu. Otherwise, up one level |
 | `-` `+` | Zoom out and in |
 | `M` `T` `S` `R` | The map, the roles tree, the sandbox, review |
+| `/` | Find: type a few letters to jump to any lesson, track, role or action |
 | `C` | Continue with the next lesson |
+| `D` | Theme: auto, light, dark |
+| `Alt` + `↑` `↓` | In a plan, move the step in focus |
 | `1` to `4` | Answer. In a review, after a right answer: `1` Hard, `2` Good, `3` Easy |
 | `?` | The keys sheet |
 

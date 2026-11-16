@@ -32,7 +32,7 @@
   function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 150); }
   addEventListener('pagehide', saveNow);
   function today() { var k = dayNow(); return S.days[k] || (S.days[k] = { min: 0, xp: 0 }); }
-  function addXp(n) { S.xp += n; today().xp += n; save(); }
+  function addXp(n) { var l0 = Math.floor(S.xp / 100); S.xp += n; today().xp += n; save(); if (Math.floor(S.xp / 100) > l0) toast('Level ' + (1 + Math.floor(S.xp / 100))); }
   function activeDay(d) { var x = S.days[d]; return !!x && (x.min >= 1 || x.xp > 0); }
   function streak() { var d = dayNow(), n = 0; if (!activeDay(d)) d--; while (activeDay(d)) { n++; d--; } return n; }
 
@@ -81,7 +81,7 @@
     return '<svg class="ring ' + (cls || '') + '" width="' + size + '" height="' + size + '" viewBox="0 0 50 50" aria-hidden="true"><circle class="bg" cx="25" cy="25" r="21"/><circle class="fg" cx="25" cy="25" r="21" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '"/>' + (label ? '<text x="25" y="26">' + label + '</text>' : '') + '</svg>';
   }
   function kbd(k) { return '<kbd aria-hidden="true">' + k + '</kbd>'; } // a key hint: seen, not read out (the button says its own name)
-  function hue(i) { return 'var(--a' + (i % 6 + 1) + ')'; }             // one hue per track or roles family
+  function hue(i) { return 'var(--a' + (i % 9 + 1) + ')'; }             // one hue per track or roles family
   function pctTxt(p) { return Math.round(p * 100) + '%'; }
   function segs(list) { return '<span class="segs" aria-hidden="true">' + list.map(function (x) { return '<i class="' + (x.cls || '') + '" style="--p:' + Math.round(x.p * 100) + '%"></i>'; }).join('') + '</span>'; }
   function qpips(sid) { var d = dayNow(); return '<span class="qp" aria-hidden="true">' + QSETS[sid].map(function (q) { var c = S.cards[q.id]; return '<i class="' + (!c ? '' : c.due <= d ? 'due' : 'ok') + '"></i>'; }).join('') + '</span>'; }
@@ -99,8 +99,9 @@
 
   // ---------- zoom: four stops, in two spaces (the learning map and the roles tree) ----------
   var STOPS = { learn: ['Map', 'Track', 'Concept', 'Detail'], roles: ['Tree', 'Family', 'Role', 'Detail'] };
-  var wantFocus = false;
+  var wantFocus = false, went = false;
   function go(z, track, concept) {
+    var z0 = S.pos.zoom, sp0 = S.pos.space;
     if (S.pos.space === 'roles' && RO) {
       var f = famOf(S.pos.fam) || RO.families[0]; S.pos.fam = f.id;
       var r = roleOf(S.pos.role); if (r && r.fam !== f.id && z >= 2) { S.pos.fam = r.fam; }
@@ -116,7 +117,16 @@
     }
     S.pos.zoom = Math.max(0, Math.min(3, z));
     save(); renderAll();
+    if (z0 !== S.pos.zoom || sp0 !== S.pos.space || !went) arrive(z0);
+    went = true;
     if (wantFocus) land();
+  }
+  // A zoom grows out of the thing you opened (and shrinks back into it): the layers scale about that tile or lesson. Then what is in the new layer arrives, a beat apart.
+  function arrive(z0) {
+    var st = $('#stage'), L = $('#L' + S.pos.zoom), a = $('#L' + Math.min(z0, S.pos.zoom) + ' [data-primary] [tabindex="0"]'), sr = st.getBoundingClientRect(), r = a && a.getBoundingClientRect(), ok = r && r.width && sr.width;
+    st.style.setProperty('--ox', ok ? ((r.left + r.width / 2 - sr.left) / sr.width * 100).toFixed(1) + '%' : '50%');
+    st.style.setProperty('--oy', ok ? ((r.top + r.height / 2 - sr.top) / sr.height * 100).toFixed(1) + '%' : '40%');
+    L.classList.remove('arrive'); void L.offsetWidth; L.classList.add('arrive');
   }
   // Where the keyboard lands after a zoom: on the item you are at in a map or a list (so the arrows carry on from there), on the heading where there is something to read.
   function land() {
@@ -148,6 +158,7 @@
     var stops = $('#z-stops'), had = stops.contains(document.activeElement) ? document.activeElement.dataset.z : null;
     stops.innerHTML = st; if (had !== null) $('[data-z="' + had + '"]', stops).focus();
     $('#z-out').disabled = S.pos.zoom === 0; $('#z-in').disabled = !canZoomIn();
+    $('#zoombar').dataset.z = S.pos.zoom; readSync();
     var bits = [names[0]];
     if (S.pos.space === 'roles') {
       var f = famOf(S.pos.fam), r = roleOf(S.pos.role);
@@ -187,7 +198,7 @@
       '<section class="panel today" id="today" aria-label="Today">' + todayHtml() + '</section><div class="map" data-primary>';
     A.tracks.forEach(function (t, i) {
       var rd = readyIn(t).length, pct = trackPct(t), here = S.pos.track === t.id;
-      h += '<button type="button" class="tcard' + (rd ? '' : ' soon') + (here ? ' here' : '') + '" data-track="' + t.id + '" style="--c:' + hue(i) + '" title="' + esc(t.blurb) + '"' + (here ? ' aria-current="true"' : '') + '>' +
+      h += '<button type="button" class="tcard' + (rd ? '' : ' soon') + (here ? ' here' : '') + (nx && nx.t === t ? ' next' : '') + '" data-track="' + t.id + '" style="--c:' + hue(i) + ';--i:' + i + '" title="' + esc(t.blurb) + '"' + (here ? ' aria-current="true"' : '') + '>' +
         '<span class="tring">' + ring(pct, 76, 'hue') + '<b>' + (i + 1) + '</b></span>' +
         '<span class="tx"><span class="n">Track ' + (i + 1) + ' · ' + pctTxt(pct) + '</span><span class="tt">' + esc(t.title) + '</span></span>' +
         '<span class="state' + (rd ? ' go' : '') + '">' + (rd ? rd + (rd === 1 ? ' lesson' : ' lessons') + ' ready' : 'coming') + '</span>' +
@@ -203,7 +214,7 @@
       '<div class="panel path" data-primary style="--c:' + hue(ti) + '">';
     t.concepts.forEach(function (c, i) {
       var ok = !!A.lessons[c.id], cur = c.id === S.pos.concept;
-      h += '<button type="button" class="node' + (cur ? ' cur' : '') + '"' + (ok ? ' data-concept="' + c.id + '"' : ' disabled') + (cur ? ' aria-current="true"' : '') + '><span class="dot">' + ring(setPct(c.id), 48, 'hue') + '<span>' + (i + 1) + '</span></span>' +
+      h += '<button type="button" class="node' + (cur ? ' cur' : '') + '" style="--i:' + i + '"' + (ok ? ' data-concept="' + c.id + '"' : ' disabled') + (cur ? ' aria-current="true"' : '') + '><span class="dot">' + ring(setPct(c.id), 48, 'hue') + '<span>' + (i + 1) + '</span></span>' +
         '<span><span class="nt">' + esc(c.title) + '</span><span class="ns">' + (ok ? esc(c.idea || '') : 'Coming soon') + '</span></span>' +
         '<span class="nr">' + (S.done[c.id] ? '<span class="tag go">done</span>' : '') + (ok ? qpips(c.id) : '') + '</span></button>';
     });
@@ -234,8 +245,22 @@
     L.read.forEach(function (s) { h += '<h2>' + esc(s.h) + '</h2><p>' + esc(s.p) + '</p>'; });
     h += '<div class="under"><h2>' + esc(L.under.h) + '</h2><p>' + esc(L.under.p) + '</p></div><div class="agile"><h2>The Agile lens</h2><p>' + esc(L.agile) + '</p><h2>In practice</h2><p>' + esc(L.tools) + '</p></div>' + sourcesHtml(L.src);
     var nx = nextLesson(c.id);
-    $('#L3').innerHTML = h + '<p class="row" style="margin-top:24px"><button type="button" class="btn" data-z="2">Back to the lesson' + kbd('Esc') + '</button>' + (nx ? ' <button type="button" class="btn primary" data-act="nextlesson">Next lesson: ' + esc(nx.c.title) + '</button>' : '') + '</p></article>';
+    $('#L3').innerHTML = '<div class="reading"><nav class="toc" aria-label="On this page"></nav>' + h + '<p class="row" style="margin-top:24px"><button type="button" class="btn" data-z="2">Back to the lesson' + kbd('Esc') + '</button>' + (nx ? ' <button type="button" class="btn primary" data-act="nextlesson">Next lesson: ' + esc(nx.c.title) + '</button>' : '') + '</p></article></div>';
+    buildToc();
   }
+  // Detail: a rail of the sections beside the text, and a thin bar along the top that fills as you read.
+  function buildToc() {
+    var L = $('#L3'), toc = $('.toc', L); if (!toc) return;
+    toc.innerHTML = '<div class="label">On this page</div>' + $$('.article h2', L).map(function (x, i) { x.id = 'sec-' + i; x.tabIndex = -1; return '<button type="button" data-sec="' + i + '">' + esc(x.textContent) + '</button>'; }).join('');
+    readSync();
+  }
+  function readSync() {
+    var L = $('#L3'), max = L.scrollHeight - L.clientHeight, top = L.getBoundingClientRect().top, cur = -1;
+    $('#readbar i').style.width = (S.pos.zoom === 3 && max > 0 ? Math.min(100, L.scrollTop / max * 100) : 0) + '%';
+    $$('.article h2', L).forEach(function (x, i) { if (x.getBoundingClientRect().top - top < 150) cur = i; });
+    $$('.toc button', L).forEach(function (b, i) { if (i === cur) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+  }
+  $('#L3').addEventListener('scroll', readSync, { passive: true });
 
   // ---------- the roles family tree: the same four stops ----------
   var famFilter = '';
@@ -308,20 +333,21 @@
     var h = '<article class="article">' + sizeBar() + '<div class="kicker">' + esc(famOf(n.fam).title) + (n.forecast ? ' · forecast, not fact' : '') + '</div><h1>' + esc(n.title) + '</h1><p>' + esc(n.one) + '</p>';
     n.read.forEach(function (s) { h += '<h2>' + esc(s.h) + '</h2><p>' + esc(s.p) + '</p>'; });
     h += '<div class="agile"><h2>' + (n.forecast ? 'Why I think so' : 'Where it is heading') + '</h2><p>' + esc(n.heading) + '</p></div>' + sourcesHtml(n.src);
-    $('#L3').innerHTML = h + '<p class="row" style="margin-top:24px"><button type="button" class="btn" data-z="0">Back to the tree' + kbd('T') + '</button></p></article>';
+    $('#L3').innerHTML = '<div class="reading"><nav class="toc" aria-label="On this page"></nav>' + h + '<p class="row" style="margin-top:24px"><button type="button" class="btn" data-z="0">Back to the tree' + kbd('T') + '</button></p></article></div>';
+    buildToc();
   }
 
   // ---------- the quiz: one at a time, in a lesson or on a roles family ----------
   var Q = null;
   function startQuiz(sid, box) { if (!Q || Q.sid !== sid) Q = { sid: sid, box: box, i: 0, picked: null, right: 0, res: [], done: false }; }
   function quizLive() { return !!Q && ((S.pos.space === 'learn' && S.pos.zoom === 2 && Q.box === '#quiz') || (S.pos.space === 'roles' && S.pos.zoom === 1 && Q.box === '#fquiz')); }
-  function optsHtml(q, picked, attr) {
+  function optsHtml(q, picked, attr, fresh) {
     var o = '';
     q.opts.forEach(function (t, i) {
       var cls = picked === null ? '' : i === q.a ? ' right' : i === picked ? ' wrong' : '';
       o += '<button type="button" class="opt' + cls + '" ' + attr + '="' + i + '"' + (picked === null ? '' : ' disabled') + '><kbd aria-hidden="true">' + (i + 1) + '</kbd><span>' + esc(t) + (picked === null ? '' : i === q.a ? ' <b class="mark">✓ correct</b>' : i === picked ? ' <b class="mark">✗ your pick</b>' : '') + '</span></button>';
     });
-    return '<div class="opts" role="group" aria-label="Answers">' + o + '</div>';
+    return '<div class="opts' + (fresh ? ' fresh' : '') + '" role="group" aria-label="Answers">' + o + '</div>';
   }
   function renderQuiz(focus) {
     var box = Q && $(Q.box); if (!box) return;
@@ -329,7 +355,7 @@
     for (var i = 0; i < n; i++) dots += '<i class="' + (Q.res[i] === true ? 'ok' : Q.res[i] === false ? 'bad' : i === Q.i && !Q.done ? 'on' : '') + '"></i>';
     if (Q.done) {
       var nx = S.pos.space === 'learn' ? nextLesson(Q.sid) : null;
-      box.innerHTML = '<div class="done"><div class="dots">' + dots + '</div><h3 tabindex="-1">' + Q.right + ' of ' + n + ' right</h3><p class="muted" style="margin:0">' + (Q.gain ? '+' + Q.gain + ' XP. ' : '') + (Q.added ? Q.added + ' cards joined your review queue.' : 'Your review cards keep their schedule.') + '</p>' +
+      box.innerHTML = '<div class="done"><div class="dots">' + dots + '</div><div class="score" style="--c:var(--ok)" aria-hidden="true">' + ring(Q.right / n, 96, 'hue') + '<b>' + Q.right + '/' + n + '</b></div><h3 tabindex="-1">' + Q.right + ' of ' + n + ' right</h3><p class="muted" style="margin:0">' + (Q.gain ? '+' + Q.gain + ' XP. ' : '') + (Q.added ? Q.added + ' cards joined your review queue.' : 'Your review cards keep their schedule.') + '</p>' +
         '<div class="row" style="justify-content:center">' + (nx ? '<button type="button" class="btn primary" data-act="nextlesson">Next lesson: ' + esc(nx.c.title) + '</button>' : '') +
         (S.pos.space === 'learn' ? '<button type="button" class="btn' + (nx ? '' : ' primary') + '" data-act="detail">Read more</button><button type="button" class="btn" data-z="1">Back to the track</button>' : '<button type="button" class="btn" data-z="0">Back to the tree</button>') +
         '<button type="button" class="btn" data-act="replay">Replay the quiz</button></div></div>';
@@ -337,7 +363,7 @@
       return;
     }
     var q = qs[Q.i];
-    box.innerHTML = '<div class="dots">' + dots + '</div><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, Q.picked, 'data-opt') +
+    box.innerHTML = '<div class="dots">' + dots + '</div><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, Q.picked, 'data-opt', focus) +
       (Q.picked === null ? '' : '<p class="why" role="status"><b>' + (Q.picked === q.a ? 'Right. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</p><p style="margin:12px 0 0"><button type="button" class="btn primary" data-act="next">' + (Q.i + 1 < n ? 'Next question' : 'Finish') + kbd('Enter') + '</button></p>');
     if (focus) { var f = Q.picked === null ? $('.q', box) : $('[data-act="next"]', box); if (f) f.focus({ preventScroll: Q.picked !== null }); }
   }
@@ -376,7 +402,13 @@
       '<h3>Keys</h3><div class="row"><button type="button" class="btn" data-m="keys">Keyboard shortcuts' + kbd('?') + '</button></div>' +
       '<input type="file" id="m-file" accept="application/json,.json" hidden>';
   }
-  function applyTheme() { if (S.theme) document.documentElement.setAttribute('data-theme', S.theme); else document.documentElement.removeAttribute('data-theme'); }
+  function applyTheme() {
+    if (S.theme) document.documentElement.setAttribute('data-theme', S.theme); else document.documentElement.removeAttribute('data-theme');
+    var b = $('#c-theme'); b.setAttribute('aria-label', 'Theme: ' + (S.theme || 'auto')); b.title = 'Theme: ' + (S.theme || 'auto') + ' ( D )';
+  }
+  function cycleTheme() { S.theme = S.theme === '' ? 'light' : S.theme === 'light' ? 'dark' : ''; applyTheme(); save(); }
+  var toastT = 0;
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 2600); } // one quiet line, then gone
   function applyRead() { document.documentElement.style.setProperty('--read', S.read + 'px'); }
 
   // ---------- sheets: review, the sandbox and the keys list open over the page, hold the keyboard, and give focus back when they close ----------
@@ -394,7 +426,7 @@
     if (back && !back.disabled) back.focus({ preventScroll: true }); else if (sheetBack && sheetBack !== document.body) land();
     sheetBack = null;
   }
-  function sheetOpen() { return R || !$('#sandbox').hidden || !$('#keys').hidden; }
+  function sheetOpen() { return R || !$('#sandbox').hidden || !$('#keys').hidden || !$('#find').hidden; }
 
   var R = null;
   function openReview() { if (sheetOpen()) return; var ids = dueIds(); R = { ids: ids, i: 0, picked: null, gain: 0, shown: ids.length }; openSheet('#review'); renderReview(true); }
@@ -415,7 +447,7 @@
           : '<p style="margin:12px 0 0"><button type="button" class="btn primary" data-g="1">Got it, next' + kbd('Enter') + '</button></p>');
     }
     var shown = R.ids.slice(0, 40).map(function (x, i) { return { p: i < R.i ? 1 : 0, cls: i === R.i ? 'at' : '' }; });
-    box.innerHTML = '<div class="sheet"><div class="sheethead"><h2 class="kicker" id="rv-title">Review · card ' + (R.i + 1) + ' of ' + R.ids.length + '</h2>' + segs(shown) + close + '</div><div class="card"><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, R.picked, 'data-ropt') + tail + '</div></div>';
+    box.innerHTML = '<div class="sheet"><div class="sheethead"><h2 class="kicker" id="rv-title">Review · card ' + (R.i + 1) + ' of ' + R.ids.length + '</h2>' + segs(shown) + close + '</div><div class="card"><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, R.picked, 'data-ropt', focus) + tail + '</div></div>';
     if (focus) { var f = R.picked === null ? $('.q', box) : $('[data-g="4"]', box) || $('[data-g="1"]', box); if (f) f.focus(); }
   }
   function rpick(i) { if (R && R.picked === null && R.i < R.ids.length && i < QINDEX[R.ids[R.i]].opts.length) { R.picked = i; renderReview(true); } }
@@ -441,6 +473,7 @@
     ['Tab', 'The next group of controls (a list or a row of choices is one stop)'],
     ['Home End', 'First or last in a list'],
     ['Esc', 'Close a sheet or the Menu. Otherwise, up one level'],
+    ['/', 'Find: type a few letters to jump to any lesson, track, role or action'],
     ['h', 'Zoom and go to'],
     ['- +', 'Zoom out and in: Map, Track, Concept, Detail'],
     ['M', 'The learning map'], ['T', 'The roles family tree'], ['C', 'Continue: the next lesson you have not done'], ['S', 'The prompt sandbox'],
@@ -448,6 +481,9 @@
     ['1 2 3 4', 'Answer the question'],
     ['R', 'Review the cards that are due'],
     ['1 2 3', 'In a review, after a right answer: Hard, Good, Easy'],
+    ['h', 'Also'],
+    ['D', 'Theme: auto, light, dark'],
+    ['Alt+↑ Alt+↓', 'In a plan, move the step in focus up or down'],
     ['?', 'This list']
   ];
   function openKeys() {
@@ -460,10 +496,54 @@
   }
   function closeKeys() { $('#keys').innerHTML = ''; closeSheet('#keys'); }
 
+  // Find: type a few letters, pick with the arrows, Enter goes there. Every lesson, track, role and action is in the list.
+  var F = null;
+  function findItems() {
+    var out = [], nx = nextLesson();
+    if (nx) out.push({ k: 'Go', t: 'Continue: ' + nx.c.title, key: 'C', run: goContinue });
+    out.push({ k: 'Go', t: 'Review the cards that are due', key: 'R', run: openReview }, { k: 'Go', t: 'Prompt sandbox', key: 'S', run: function () { openSandbox(); } },
+      { k: 'Go', t: 'Learning map', key: 'M', run: function () { act(function () { S.pos.space = 'learn'; go(0); }); } }, { k: 'Go', t: 'Roles family tree', key: 'T', run: function () { act(function () { S.pos.space = 'roles'; go(0); }); } },
+      { k: 'Do', t: 'Keyboard shortcuts', key: '?', run: openKeys }, { k: 'Do', t: 'Change the theme', key: 'D', run: function () { cycleTheme(); toast('Theme: ' + (S.theme || 'auto')); } });
+    A.tracks.forEach(function (t, i) {
+      out.push({ k: 'Track ' + (i + 1), t: t.title, s: t.blurb, run: function () { act(function () { S.pos.space = 'learn'; go(1, t.id); }); } });
+      readyIn(t).forEach(function (c) { out.push({ k: 'Lesson', t: c.title, s: (c.idea ? c.idea + ' ' : '') + '· ' + t.title, run: function () { act(function () { goLesson({ t: t, c: c }); }); } }); });
+    });
+    if (RO) {
+      RO.families.forEach(function (f) { out.push({ k: 'Family', t: f.title, s: f.blurb, run: function () { act(function () { goRole(1, f.id); }); } }); });
+      RO.nodes.forEach(function (n) { out.push({ k: 'Role', t: n.title, s: n.one, run: function () { act(function () { goRole(2, null, n.id); }); } }); });
+    }
+    return out;
+  }
+  function openFind() {
+    if (sheetOpen()) return;
+    var el = openSheet('#find'); F = { items: findItems(), hits: [], sel: 0 };
+    el.innerHTML = '<div class="sheet narrow"><div class="card findbox"><label class="label" for="fd-in">Find a lesson, a track, a role or an action</label>' +
+      '<input type="text" id="fd-in" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="fd-list" aria-autocomplete="list" placeholder="Type a few letters">' +
+      '<ul id="fd-list" role="listbox" aria-label="Results"></ul><p class="note" aria-hidden="true">' + kbd('↑') + ' ' + kbd('↓') + ' move · ' + kbd('Enter') + ' go · ' + kbd('Esc') + ' close</p></div></div>';
+    findDraw(''); $('#fd-in').focus();
+  }
+  function closeFind() { F = null; $('#find').innerHTML = ''; closeSheet('#find'); }
+  function findDraw(text) {
+    var words = text.toLowerCase().split(/\s+/).filter(Boolean);
+    F.hits = F.items.map(function (it, i) {
+      var t = it.t.toLowerCase(), all = (it.k + ' ' + it.t + ' ' + (it.s || '')).toLowerCase(), sc = 0;
+      for (var w = 0; w < words.length; w++) { var at = t.indexOf(words[w]); if (all.indexOf(words[w]) < 0) return null; sc += at === 0 ? 0 : at > 0 && /[^a-z0-9]/.test(t.charAt(at - 1)) ? 1 : at > 0 ? 2 : 4; } // best: the title starts with it; then a word in the title; then anywhere
+      return { it: it, sc: sc, i: i };
+    }).filter(Boolean).sort(function (a, b) { return a.sc - b.sc || a.i - b.i; }).slice(0, 8);
+    F.sel = 0; findList();
+  }
+  function findList() {
+    $('#fd-list').innerHTML = F.hits.length ? F.hits.map(function (h, i) {
+      return '<li role="option" id="fd-' + i + '" data-hit="' + i + '" aria-selected="' + (i === F.sel) + '"><span class="k">' + esc(h.it.k) + '</span><span class="t"><b>' + esc(h.it.t) + '</b>' + (h.it.s ? '<small>' + esc(h.it.s) + '</small>' : '') + '</span>' + (h.it.key ? kbd(h.it.key) : '') + '</li>';
+    }).join('') : '<li class="none">Nothing matches.</li>';
+    $('#fd-in').setAttribute('aria-activedescendant', F.hits.length ? 'fd-' + F.sel : '');
+  }
+  function findRun(i) { var h = F && F.hits[i]; if (!h) return; closeFind(); h.it.run(); }
+
   // ---------- keyboard: one tab stop per list, arrows inside it ----------
   // A "group" is a list, a grid, a tab bar or a row of choices. Tab stops on it once (roving tabindex); the arrow keys move inside it by position on screen,
   // so the same rule walks the 3 by 3 map, a column of lessons, a row of chips and the roles tree. Widgets redraw their own buttons, so the groups are found by class, not wired one by one.
-  var GROUPS = '.tabs, .stops, .acts, .map, .path, .lrail, .opts, .grades, .exs, .toggles, fieldset.seg, ol.plan, .tree, .size, .widget .row, .done .row, #menu';
+  var GROUPS = '.tabs, .stops, .acts, .map, .path, .lrail, .toc, .opts, .grades, .exs, .toggles, fieldset.seg, ol.plan, .tree, .size, .widget .row, .done .row, #menu';
   var ITEMS = 'button:not([disabled]), input[type=checkbox]:not([disabled])';
   var MARKED = '.on, .cur, .here, [aria-pressed="true"], [aria-current]';
   function itemsOf(g) { return $$(ITEMS, g).filter(function (x) { return x.closest(GROUPS) === g; }); }
@@ -512,7 +592,7 @@
     nx.focus(); return true;
   }
   function trapTab(e) { // a sheet is a dialog: Tab goes round inside it
-    var box = !$('#keys').hidden ? $('#keys') : R ? $('#review') : $('#sandbox');
+    var box = F ? $('#find') : !$('#keys').hidden ? $('#keys') : R ? $('#review') : $('#sandbox');
     var f = $$('button, a[href], input, select, textarea', box).filter(function (x) { return !x.disabled && x.tabIndex >= 0 && x.getClientRects().length; });
     var a = document.activeElement, inside = box.contains(a) && f.indexOf(a) >= 0;
     if (!f.length) return e.preventDefault();
@@ -529,6 +609,7 @@
   function act(fn) { wantFocus = true; try { fn(); } finally { wantFocus = false; } }
 
   document.addEventListener('click', function (e) {
+    var hit = e.target.closest ? e.target.closest('#fd-list [data-hit]') : null; if (hit) return findRun(+hit.dataset.hit);
     var b = e.target.closest ? e.target.closest('button') : null; if (!b) { if (!e.target.closest('#menu')) closeMenu(); return; }
     var d = b.dataset;
     if (b.closest('.widget')) return; // widgets handle their own buttons
@@ -539,6 +620,7 @@
     if (d.role) return act(function () { goRole(2, null, d.role); });
     if (d.filter !== undefined) { famFilter = d.filter; renderTree(); rove(); var fb = $('#L0 [data-filter="' + famFilter + '"]'); if (fb) fb.focus(); return; }
     if (d.z) return act(function () { go(+d.z); });
+    if (d.sec) { var h2 = $('#sec-' + d.sec); if (h2) { h2.focus({ preventScroll: true }); h2.scrollIntoView({ block: 'start' }); } return; }
     if (d.opt) return pick(+d.opt);
     if (d.ropt) return rpick(+d.ropt);
     if (d.g) return rgrade(+d.g);
@@ -557,6 +639,8 @@
     if (b.id === 'z-in') return zoomBy(1);
     if (b.id === 'z-out') return zoomBy(-1);
     if (b.id === 'z-keys') return openKeys();
+    if (b.id === 'c-find') return openFind();
+    if (b.id === 'c-theme') { cycleTheme(); return toast('Theme: ' + (S.theme || 'auto')); }
     if (b.id === 'c-review') return openReview();
     if (b.id === 'c-menu') return toggleMenu();
   });
@@ -570,7 +654,7 @@
     if (a === 'roles') { closeMenu(); return act(function () { S.pos.space = 'roles'; go(0); }); }
     if (a === 'sandbox') { $('#c-menu').focus(); closeMenu(); return openSandbox(); } // focus first: closing the sheet hands it back to the Menu button
     if (a === 'keys') { $('#c-menu').focus(); closeMenu(); return openKeys(); }
-    if (a === 'theme') { S.theme = S.theme === '' ? 'light' : S.theme === 'light' ? 'dark' : ''; applyTheme(); save(); }
+    if (a === 'theme') cycleTheme();
     else if (a === 'save') {
       var out = Object.assign({}, S, { names: [], saved: new Date().toISOString() }); // the names you listed for the sandbox stay out of the file
       var blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }), x = document.createElement('a');
@@ -580,6 +664,7 @@
     else if (a === 'reset') { if (!resetArmed) { resetArmed = true; renderMenu(); rove(); $('[data-m="reset"]').focus(); setTimeout(function () { resetArmed = false; if (!$('#menu').hidden && $('[data-m="reset"]')) { var had = document.activeElement === $('[data-m="reset"]'); renderMenu(); rove(); if (had) $('[data-m="reset"]').focus(); } }, 4000); return; } resetArmed = false; S = fresh(); try { localStorage.removeItem(KEY); } catch (e) { /* nothing stored */ } Q = null; applyTheme(); applyRead(); $('#L2').dataset.key = ''; renderAll(); menuMsg = 'Progress erased.'; }
     renderMenu(); rove(); var again = $('[data-m="' + a + '"]'); if (again) again.focus();
   }
+  document.addEventListener('input', function (e) { if (F && e.target.id === 'fd-in') findDraw(e.target.value); });
   document.addEventListener('change', function (e) {
     if (e.target.name === 'm-goal') { S.goal = +e.target.value; save(); renderChips(); }
     if (e.target.id === 'm-file' && e.target.files[0]) {
@@ -597,14 +682,20 @@
     var sheet = sheetOpen();
     if (e.key === 'Tab') { if (sheet) trapTab(e); return; }
     if (e.key === 'Escape') { // closes what is open; with nothing open, and not in a text box, it goes up one level
-      if (!$('#keys').hidden) closeKeys(); else if (R) closeReview(); else if (!$('#sandbox').hidden) closeSandbox(); else if (!$('#menu').hidden) closeMenu(true);
+      if (F) closeFind(); else if (!$('#keys').hidden) closeKeys(); else if (R) closeReview(); else if (!$('#sandbox').hidden) closeSandbox(); else if (!$('#menu').hidden) closeMenu(true);
       else if (!typing(e) && S.pos.zoom > 0) { e.preventDefault(); act(function () { zoomBy(-1); }); }
+      return;
+    }
+    if (F) { // in Find the arrows and Enter drive the list; every other key is typing
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (F.hits.length) { F.sel = (F.sel + (e.key === 'ArrowDown' ? 1 : F.hits.length - 1)) % F.hits.length; findList(); var sl = $('#fd-' + F.sel); if (sl) sl.scrollIntoView({ block: 'nearest' }); } }
+      else if (e.key === 'Enter') { e.preventDefault(); findRun(F.sel); }
       return;
     }
     if (typing(e)) return; // never steal a key from someone who is typing
     if (/^Arrow|^Home$|^End$/.test(e.key)) { if (arrows(e)) e.preventDefault(); return; }
     var k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (k === '?') { e.preventDefault(); if (!$('#keys').hidden) closeKeys(); else if (!sheet) openKeys(); return; }
+    if (k === '/') { e.preventDefault(); if (!sheet) { closeMenu(); openFind(); } return; }
     if (R) {
       if (/^[1-4]$/.test(k)) { if (R.i >= R.ids.length) return; var q = QINDEX[R.ids[R.i]]; if (R.picked === null) rpick(+k - 1); else if (R.picked === q.a && +k <= 3) rgrade([3, 4, 5][+k - 1]); }
       else if (k === 'Enter' && !/^BUTTON$/.test(e.target.tagName) && R.picked !== null && R.i < R.ids.length) rgrade(R.picked === QINDEX[R.ids[R.i]].a ? 4 : 1);
@@ -618,6 +709,7 @@
     else if (k === 'r') openReview();
     else if (k === 's') { if (WIDGETS.sandbox) { e.preventDefault(); openSandbox(); } }
     else if (k === 'c') { closeMenu(); goContinue(); }
+    else if (k === 'd') { cycleTheme(); toast('Theme: ' + (S.theme || 'auto')); }
     else if (k === 'm') { closeMenu(); act(function () { S.pos.space = 'learn'; go(0); }); }
     else if (k === 't' && RO) { closeMenu(); act(function () { S.pos.space = 'roles'; go(0); }); }
   });
@@ -637,7 +729,7 @@
   // minutes studied today: counts only while the page is visible and you touched it in the last minute
   var lastInput = Date.now();
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) { addEventListener(ev, function () { lastInput = Date.now(); }, { passive: true }); });
-  setInterval(function () { if (document.visibilityState === 'visible' && Date.now() - lastInput < 60000) { today().min += 5 / 60; save(); renderChips(); } }, 5000);
+  setInterval(function () { if (document.visibilityState === 'visible' && Date.now() - lastInput < 60000) { var was = today().min; today().min += 5 / 60; if (was < S.goal && today().min >= S.goal) toast('Daily goal reached'); save(); renderChips(); } }, 5000);
 
   applyTheme(); applyRead();
   go(S.pos.zoom);

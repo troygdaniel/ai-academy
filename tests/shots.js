@@ -1,4 +1,4 @@
-// Screenshots for a pull request: the seven main views, light and dark, at 1440 x 900.
+// Screenshots for a pull request: the main views, light and dark, at 1440 x 900.
 //   node tests/shots.js [out-dir]        (default: docs/screens)
 // Like tests/run.js it opens index.html from disk. It seeds a little made-up progress so the gauges have something to show.
 const { chromium } = require('playwright');
@@ -34,8 +34,9 @@ const seed = () => {
     await page.locator('#sandbox [data-ex="3"]').click(); await page.locator('#sb-text').focus(); await shot('6-sandbox');
     await page.keyboard.press('Escape'); await page.keyboard.press('t'); await page.keyboard.press('ArrowDown'); await shot('7-roles-tree');
     await page.keyboard.press('?'); await shot('8-keys');
+    await page.keyboard.press('Escape'); await page.keyboard.press('/'); await page.keyboard.type('agent'); await page.keyboard.press('ArrowDown'); await shot('9-find');
     await ctx.close();
   }
   await browser.close();
-  console.log('wrote 16 screenshots to ' + OUT);
+  console.log('wrote 18 screenshots to ' + OUT);
 })().catch(e => { console.error(e); process.exit(1); });

@@ -549,7 +549,7 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   eq(await D(page, () => [...document.querySelectorAll('#L0 .tcard')].filter(b => b.tabIndex === 0).map(b => b.dataset.track)), ['models'], 'the Map is one tab stop: only the track you are at can be tabbed to');
   eq(await D(page, () => ['.tabs', '.acts', '#z-stops'].map(g => [...document.querySelectorAll(g + ' button')].filter(b => b.tabIndex === 0).length)), [1, 1, 1], 'the map switch, the action row and the zoom stops are one tab stop each');
   let stops = 0; await page.keyboard.press('Tab'); while (await at() !== 'z-keys' && stops < 30) { stops++; await page.keyboard.press('Tab'); }
-  ok(stops <= 8, 'Tab crosses the whole Map in a few stops, not one per tile', stops + ' stops');
+  ok(stops <= 10, 'Tab crosses the whole Map in a few stops, not one per tile', stops + ' stops');
   await page.keyboard.press('m');
   eq(await at(), 'models', 'M lands the keyboard on the track you are at');
   await press('ArrowRight'); const k1 = await at(); await press('ArrowDown'); const k2 = await at(); await press('ArrowLeft'); const k3 = await at(); await press('ArrowUp');
@@ -688,6 +688,88 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
     ok(ringC.on && ringC.w >= 2 && ringC.ring >= 3 && ringC.badge >= 4.5, scheme + ': the focus ring is 2px with at least 3:1 against the page, and the due badge has 4.5:1', JSON.stringify(ringC));
     await page.close();
   }
+
+  // ------------------------------------------------------------------ find, theme key, toasts, reading rail, zoom origin
+  section('Find, the theme key, small moments, the reading rail');
+  page = await open(browser);
+  const at2 = () => D(page, () => { const a = document.activeElement; return a.id || a.tagName; });
+  const pos = () => D(page, () => { const p = ACADEMY_DEBUG.state().pos; return [p.space, p.zoom, p.space === 'roles' ? p.role : p.concept]; });
+  await page.keyboard.press('m'); await page.keyboard.press('/');
+  ok(await page.locator('#find').isVisible() && await at2() === 'fd-in', 'the / key opens Find with the cursor in its box');
+  ok(await page.locator('#fd-list li').count() === 8 && /Continue: Tokens/.test(await text(page, '#fd-list li >> nth=0')), 'before you type, it offers the actions, Continue first');
+  await page.keyboard.type('temp');
+  ok(/Next token and temperature/.test(await text(page, '#fd-list li[aria-selected="true"]')), 'typing narrows the list: "temp" finds the temperature lesson');
+  await page.keyboard.press('Enter');
+  eq([await page.locator('#find').isHidden(), await pos(), await at2()], [true, ['learn', 2, 'nexttoken'], 'H1'], 'Enter goes to the lesson, closes Find and lands on the heading');
+  await page.keyboard.press('/'); await page.keyboard.type('m?t d');
+  eq([await page.inputValue('#fd-in'), await pos(), await page.locator('#keys').isHidden()], ['m?t d', ['learn', 2, 'nexttoken'], true], 'in Find, letters and ? are typing, not shortcuts');
+  ok(/Nothing matches/.test(await text(page, '#fd-list')), 'no match says so');
+  await page.fill('#fd-in', 'engineer'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
+  eq(await D(page, () => [...document.querySelectorAll('#fd-list li')].findIndex(l => l.getAttribute('aria-selected') === 'true')), 1, 'arrow keys move the selection in the list');
+  eq(await D(page, () => document.querySelector('#fd-in').getAttribute('aria-activedescendant')), 'fd-1', 'and a screen reader is told which one');
+  await page.keyboard.press('Tab'); eq(await at2(), 'fd-in', 'Tab stays in Find');
+  await page.keyboard.press('Escape');
+  eq([await page.locator('#find').isHidden(), await pos(), await at2()], [true, ['learn', 2, 'nexttoken'], 'H1'], 'Esc closes Find, changes nothing and gives focus back');
+  await page.keyboard.press('/'); await page.keyboard.type('scrum'); await page.keyboard.press('Enter');
+  eq(await pos(), ['roles', 2, 'sm'], 'Find reaches roles too');
+  await page.click('#c-find'); await page.fill('#fd-in', 'agents fail'); await page.click('#fd-list li >> nth=0');
+  eq(await pos(), ['learn', 2, 'agentfail'], 'the Find button opens it, several words narrow it, and a click on a result works');
+  await page.focus('#ch-p'); await page.keyboard.press('/');
+  ok(await page.locator('#find').isVisible(), 'on a slider, / still opens Find'); await page.keyboard.press('Escape');
+  await goLesson(page, 'models', 'tokens'); await page.focus('#tk-in'); await page.keyboard.type('a/d');
+  ok(await page.locator('#find').isHidden() && (await page.inputValue('#tk-in')).endsWith('a/d') && await D(page, () => !document.documentElement.dataset.theme), 'in a text box, / and D are typing');
+
+  await D(page, () => document.activeElement.blur()); await page.keyboard.press('d');
+  eq(await D(page, () => [document.documentElement.dataset.theme, document.querySelector('#c-theme').getAttribute('aria-label'), document.querySelector('#toast').textContent]), ['light', 'Theme: light', 'Theme: light'], 'the D key changes the theme, says so in a toast, and the theme button names it');
+  await page.focus('#c-theme'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  eq(await D(page, () => [document.documentElement.dataset.theme || '', document.activeElement.id]), ['', 'c-theme'], 'the theme button cycles dark and back to auto, and keeps focus');
+
+  await D(page, () => { ACADEMY_DEBUG.state().xp = 96; });
+  const ta = await D(page, () => ACADEMY.lessons.tokens.quiz.map(q => q.a));
+  await page.keyboard.press(String(ta[0] + 1));
+  ok(/Level 2/.test(await text(page, '#toast')) && await D(page, () => document.querySelector('#toast').classList.contains('on')), 'crossing 100 XP shows a level toast');
+  ok(await D(page, () => document.querySelector('#quiz .opts').classList.contains('fresh')), 'the answer you just gave is marked fresh (it glows or shakes once)');
+  await page.keyboard.press('Enter'); for (const a of ta.slice(1)) { await page.keyboard.press(String(a + 1)); await page.keyboard.press('Enter'); }
+  ok(/4\/4/.test(await text(page, '#quiz .score')) && await page.locator('#quiz .score svg.ring').count() === 1 && /4 of 4 right/.test(await text(page, '#quiz')), 'the quiz ends on a score ring as well as the words');
+
+  // zooming grows out of what you opened
+  await page.keyboard.press('m'); await page.keyboard.press('Enter');
+  const ox1 = await D(page, () => parseFloat(document.querySelector('#stage').style.getPropertyValue('--ox')));
+  await page.keyboard.press('Escape'); await page.keyboard.press('End'); await page.keyboard.press('Enter');
+  const ox2 = await D(page, () => parseFloat(document.querySelector('#stage').style.getPropertyValue('--ox')));
+  ok(ox1 < 35 && ox2 > 65, 'a zoom is centred on the tile you opened: left for track 1, right for track 9', ox1 + ' ' + ox2);
+  ok(await D(page, () => document.querySelector('#L1').classList.contains('arrive')), 'and the new layer is marked as arriving');
+  eq(await D(page, () => new Set([...document.querySelectorAll('#L0 .tcard')].map(t => getComputedStyle(t).getPropertyValue('--c').trim())).size), 9, 'each of the nine tracks has its own hue');
+  eq(await D(page, () => [...document.querySelectorAll('#L0 .tcard.next')].map(t => t.dataset.track)), ['models'], 'the tile your next lesson is in is marked');
+
+  // Detail: the rail and the bar
+  await goLesson(page, 'models', 'tokens'); await page.keyboard.press('+');
+  const nSec = await page.locator('#L3 .article h2').count();
+  eq(await page.locator('#L3 .toc button').count(), nSec, 'Detail lists its sections in a rail');
+  eq(await D(page, () => [...document.querySelectorAll('#L3 .toc button')].filter(b => b.tabIndex === 0).length), 1, 'the rail is one tab stop');
+  await page.focus('#L3 .toc button'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+  eq(await D(page, () => [document.activeElement.tagName, document.activeElement.id]), ['H2', 'sec-2'], 'arrows move along the rail and Enter jumps to that section, with focus on its heading');
+  await page.waitForTimeout(80);
+  ok(await D(page, () => parseFloat(document.querySelector('#readbar i').style.width) > 5 && document.querySelector('#L3 .toc [aria-current]').dataset.sec === '2'), 'the reading bar fills and the rail marks where you are');
+  ok(await D(page, () => [...document.querySelectorAll('#zoombar .nav')].every(n => getComputedStyle(n).display === 'none')), 'while you read, the zoom bar drops the hints that do not apply');
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  ok(await D(page, () => document.querySelector('#readbar i').style.width === '0%' && getComputedStyle(document.querySelector('#zoombar .nav')).display !== 'none'), 'both come back when you zoom out');
+
+  // pictures
+  await goLesson(page, 'models', 'context'); await setRange(page, '#cx-turns', 9); await setRange(page, '#cx-win', 80);
+  eq(await page.locator('#cx-strip i.out').count(), await page.locator('#cx-chat .msg.out').count(), 'context: the strip shows the same messages falling out as the chat');
+  ok(await page.locator('#cx-strip i.key.out').count() === 1, 'context: and marks the codename message among them');
+  await goLesson(page, 'agents', 'agentfail');
+  eq(await D(page, () => document.querySelector('#ch-out .donut').style.getPropertyValue('--p')), '35.8', 'where agents fail: the number has a gauge beside it');
+  await goLesson(page, 'agents', 'planning');
+  const firstStep = await D(page, () => document.querySelector('#pl-list .txt').textContent);
+  await page.focus('#pl-list li:first-child [data-gate]'); await page.keyboard.press('Alt+ArrowDown');
+  eq(await D(page, () => [document.querySelectorAll('#pl-list .txt')[1].textContent, document.activeElement.closest('li') === document.querySelectorAll('#pl-list li')[1], !!document.activeElement.dataset.gate]), [firstStep, true, true], 'planning: Alt + down moves the step in focus, and focus goes with it');
+  await page.keyboard.press('Alt+ArrowUp');
+  eq(await D(page, () => document.querySelector('#pl-list .txt').textContent), firstStep, 'planning: Alt + up moves it back');
+  eq(page.errors, [], 'no script errors on this run');
+  eq(page.net, [], 'and nothing over the network');
+  await page.close();
 
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
