@@ -124,13 +124,14 @@ var WIDGETS = {};
       var E = L.examples[st.ex], p = softmax(E.cands.map(function (c) { return c[1]; }), st.T), tally = E.cands.map(function () { return 0; }), h = '';
       st.picks.forEach(function (i) { tally[i]++; });
       E.cands.forEach(function (c, i) {
-        h += '<div class="bar"><span class="w">' + esc(c[0]) + '</span><span class="track"><i style="width:' + (p[i] * 100).toFixed(1) + '%"></i></span><span class="pc">' + (p[i] * 100 < 0.05 && p[i] > 0 ? '&lt;0.1' : (p[i] * 100).toFixed(1)) + '%</span><span class="tl">' + (tally[i] ? '×' + tally[i] : '') + '</span></div>';
+        h += '<div class="bar' + (st.fresh && st.picks[st.picks.length - 1] === i ? ' hit' : '') + '"><span class="w">' + esc(c[0]) + '</span><span class="track"><i style="width:' + (p[i] * 100).toFixed(1) + '%"></i></span><span class="pc">' + (p[i] * 100 < 0.05 && p[i] > 0 ? '&lt;0.1' : (p[i] * 100).toFixed(1)) + '%</span><span class="tl">' + (tally[i] ? '×' + tally[i] : '') + '</span></div>';
       });
       $('#nt-bars', root).innerHTML = h;
       $('#nt-prompt', root).innerHTML = esc(E.text) + ' <span class="gap">' + (st.picks.length ? esc(E.cands[st.picks[st.picks.length - 1]][0]) : '?') + '</span>';
       $('#nt-tv', root).textContent = st.T.toFixed(1) + (st.T === 0 ? ' (always the top one)' : st.T < 0.7 ? ' (careful)' : st.T <= 1.2 ? ' (balanced)' : ' (adventurous)');
       var kinds = tally.filter(function (n) { return n > 0; }).length;
       $('#nt-sum', root).textContent = st.picks.length ? st.picks.length + (st.picks.length === 1 ? ' pick, ' : ' picks, ') + kinds + (kinds === 1 ? ' different word.' : ' different words.') : 'Press Pick to draw the next word from these chances.';
+      st.fresh = false;
       $('#nt-picks', root).innerHTML = st.picks.slice(-40).map(function (i) { return '<span class="pk">' + esc(E.cands[i][0]) + '</span>'; }).join('');
     }
     $('#nt-t', root).value = st.T;
@@ -138,7 +139,7 @@ var WIDGETS = {};
     onClick(root, function (d) {
       if (d.ex) { st.ex = +d.ex; st.picks = []; }
       else if (d.n === '0') st.picks = [];
-      else if (d.n) { var E = L.examples[st.ex], p = softmax(E.cands.map(function (c) { return c[1]; }), st.T); for (var k = 0; k < +d.n; k++) st.picks.push(draw(p)); }
+      else if (d.n) { var E = L.examples[st.ex], p = softmax(E.cands.map(function (c) { return c[1]; }), st.T); for (var k = 0; k < +d.n; k++) st.picks.push(draw(p)); st.fresh = true; }
       else return;
       update();
     });

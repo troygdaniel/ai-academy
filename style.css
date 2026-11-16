@@ -506,6 +506,33 @@ fieldset.seg label { display: flex; gap: 8px; align-items: flex-start; min-heigh
 @keyframes vshake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } from { background: color-mix(in srgb, var(--err) 16%, var(--chip)); } }
 .widget .verdict.ok { animation: vpop .5s var(--ease); } .widget .verdict.bad { animation: vshake .32s ease-in-out; }
 
+/* ---------- toys: challenges to find, and controls that feel like something ---------- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.missions { margin: 2px 0 14px; padding: 10px 14px 12px; border-radius: 14px; background: color-mix(in srgb, var(--c) 6%, var(--bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, var(--line)); }
+.mhead { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.missions ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: var(--fs-md); }
+.missions li { display: flex; gap: 9px; align-items: center; font-weight: 600; }
+.missions li i { flex: none; font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--neutral); }
+.missions li.ok { color: var(--muted); font-weight: 500; } .missions li.ok i { background: var(--ok); color: var(--bg); box-shadow: none; animation: stamp .4s var(--ease); }
+.widget input[type=range] { -webkit-appearance: none; appearance: none; background: none; height: 28px; cursor: pointer; }
+.widget input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--c, var(--info)) var(--v, 50%), var(--ring-bg) var(--v, 50%)); }
+.widget input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -7px; border-radius: 50%; background: var(--surface); border: 2px solid var(--c, var(--info)); box-shadow: 0 2px 6px rgba(0,0,0,.22); transition: transform .12s ease; }
+.widget input[type=range]:active::-webkit-slider-thumb { transform: scale(1.18); }
+.widget input[type=range]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--ring-bg); }
+.widget input[type=range]::-moz-range-progress { height: 8px; border-radius: 99px; background: var(--c, var(--info)); }
+.widget input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--c, var(--info)); box-shadow: 0 2px 6px rgba(0,0,0,.22); }
+.widget input[type=range]:focus-visible { outline-offset: 4px; border-radius: 99px; }
+.widget input[type=checkbox], .widget input[type=radio] { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin: 2px 0 0; border: 1.5px solid var(--neutral); background: var(--surface); border-radius: 6px; display: inline-grid; place-content: center; cursor: pointer; transition: background .12s, border-color .12s; }
+.widget input[type=radio] { border-radius: 50%; }
+.widget input[type=checkbox]::after { content: ""; width: 10px; height: 6px; border-left: 2px solid var(--bg); border-bottom: 2px solid var(--bg); transform: rotate(-45deg) translate(1px, -1px) scale(0); transition: transform .16s var(--ease); }
+.widget input[type=radio]::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bg); transform: scale(0); transition: transform .16s var(--ease); }
+.widget input[type=checkbox]:checked, .widget input[type=radio]:checked { background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); }
+.widget input[type=checkbox]:checked::after { transform: rotate(-45deg) translate(1px, -1px) scale(1); } .widget input[type=radio]:checked::after { transform: scale(1); }
+.widget label:hover input[type=checkbox]:not(:checked), .widget label:hover input[type=radio]:not(:checked) { border-color: var(--c, var(--accent)); }
+.exs button { transition: transform .12s ease, box-shadow .12s ease, background .12s ease; } .exs button:active { transform: scale(.95); }
+@keyframes barhit { from { background: color-mix(in srgb, var(--run) 22%, transparent); } }
+.bar.hit { border-radius: 8px; animation: barhit .7s ease-out; } .bar.hit .w { font-weight: 700; }
+
 @media (prefers-reduced-motion: reduce) {
   /* transitions are off altogether, not just very short: a .01ms transition on an inherited property (visibility) still leaves a layer hidden for a frame, and the keyboard cannot land in it */
   *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
