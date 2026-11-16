@@ -40,11 +40,11 @@ Local only; progress in your browser's storage plus Save/Load to a file; no comp
 Agentboard's, after its Watch view: the same tokens, light and dark, tinted tiles with rings, bars cut into cells, pill switches, calm motion (reduced-motion respected). Little text on the Map and the tree; the data is drawn. Driven from the keyboard: arrows inside a list, one tab stop per list, Esc up a level, `?` for the keys. System fonts, so it works offline.
 
 ## Built so far
-Open `index.html`. Tracks 1, 2, 3 and 9 are complete (22 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 4 to 8 are outlined on the Map and greyed. Checks live in `tests/run.js`.
+Open `index.html`. All nine tracks are built (47 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Checks live in `tests/run.js`.
 
 ## Decisions taken while building (simplest option each time)
 1. The Map stays the home screen; the roles tree is a second map behind a switch at the top.
 2. Tone: plain, with a light touch of playful.
 3. The roles tree has no timeline, only an earlier-to-later order, and the few dated facts on role pages come from their own sources (R2 to R10), so none of Ian Miell's dates are echoed and nothing unsourced is implied.
 4. Track 2 has six lessons (a "roles" lesson was added to the five outlined).
-5. Track 9 was built ahead of tracks 4 to 8, for interview preparation on AI-DLC. Examples in it are generic and name no real app, because the repo may be shared. Bungay's three gaps (knowledge, alignment, effects) sit in one paragraph of the gates lesson, where they fit. The culture models from Tribal Leadership and Reinventing Organizations are left out until something fits; add them where they do.
+5. Track 9 was built first, for interview preparation on AI-DLC, and tracks 4 to 8 followed. The later pictures live in `widgets-extra.js` so that a redesign of `widgets.js` and the content work do not collide. Examples in it are generic and name no real app, because the repo may be shared. Bungay's three gaps (knowledge, alignment, effects) sit in one paragraph of the gates lesson, where they fit. The culture models from Tribal Leadership and Reinventing Organizations are left out until something fits; add them where they do.
