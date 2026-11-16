@@ -30,11 +30,11 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
 
   // ------------------------------------------------------------------ static rules
   section('Static rules: offline, no secrets, nothing company-specific');
-  const files = ['index.html', 'style.css', 'content.js', 'widgets.js', 'app.js'];
+  const files = ['index.html', 'style.css', 'content.js', 'widgets.js', 'widgets-extra.js', 'app.js'];
   const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]));
   ok(!/<(script|link|img|iframe)[^>]+(src|href)="(https?:)?\/\//i.test(src['index.html']), 'index.html loads nothing from the network');
   ok(!/@import|url\(\s*['"]?https?:/i.test(src['style.css']), 'style.css loads nothing from the network');
-  for (const f of ['content.js', 'widgets.js', 'app.js']) ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts)\b\s*\(/.test(src[f]) && !/new\s+(XMLHttpRequest|WebSocket|EventSource)/.test(src[f]), f + ' makes no network calls');
+  for (const f of ['content.js', 'widgets.js', 'widgets-extra.js', 'app.js']) ok(!/\b(fetch|XMLHttpRequest|WebSocket|sendBeacon|EventSource|importScripts)\b\s*\(/.test(src[f]) && !/new\s+(XMLHttpRequest|WebSocket|EventSource)/.test(src[f]), f + ' makes no network calls');
   const all = fs.readdirSync(ROOT).filter(f => /\.(js|html|css|md)$/.test(f)).map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n') + fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
   ok(!/\bRBC\b|Royal Bank/i.test(all), 'no employer or bank is named anywhere');
   ok(!/(api[_-]?key|secret|password|token)\s*[:=]\s*['"][A-Za-z0-9_\-]{12,}/i.test(all) && !/sk-[A-Za-z0-9]{20,}/.test(all), 'no key or secret in the repo files');
@@ -59,7 +59,7 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
     return out;
   });
   eq(shape.bad, [], 'all lessons, roles and questions are well formed');
-  eq(shape.lessons.length, 22, 'twenty-two lessons');
+  ok(shape.lessons.length >= 22, 'at least twenty-two lessons', shape.lessons.length);
   eq(shape.tracks.slice(0, 4), [5, 6, 5, 0], 'track 1 has five lessons, track 2 has six, track 3 has five, track 4 none yet');
   eq(shape.tracks[8], 6, 'track 9 (Agile x AI, AI-DLC) has six lessons');
   ok(!shape.dupe, 'question ids are unique');
@@ -285,6 +285,8 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   ok((await page.inputValue('#rh-in')).startsWith('AI-DLC is a method'), 'rehearse: your answer is kept while you move between questions');
   ok(await D(page, () => !/AI-DLC is a method/.test(JSON.stringify(ACADEMY_DEBUG.state()))), 'rehearse: what you write is not saved in your progress');
 
+  // @@TRACK-TESTS (new tracks add their checks above this line)
+
   // ------------------------------------------------------------------ sandbox
   section('Prompt sandbox');
   await goLesson(page, 'prompting', 'judge');
@@ -451,7 +453,8 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   section('Every lesson opens and runs without errors (desktop)');
   page = await open(browser);
   await D(page, () => ACADEMY_DEBUG.go(1, 'models'));
-  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge'], ['agents', 'tooluse'], ['agents', 'loop'], ['agents', 'planning'], ['agents', 'memory'], ['agents', 'agentfail'], ['agile', 'aidlc'], ['agile', 'aigates'], ['agile', 'aiphases'], ['agile', 'airollout'], ['agile', 'aievidence'], ['agile', 'airehearse']]) {
+  const everyLesson = await D(page, () => ACADEMY.tracks.flatMap(t => t.concepts.filter(c => ACADEMY.lessons[c.id]).map(c => [t.id, c.id])));
+  for (const [t, c] of everyLesson) {
     await goLesson(page, t, c);
     if (c === 'aiphases') await page.locator('#widget [data-card="i2"][data-b="ai"]').check();
     if (c === 'aievidence') await page.locator('#widget [data-claim="e2"][data-v="said"]').check();
