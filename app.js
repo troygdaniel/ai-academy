@@ -158,7 +158,7 @@
   function renderTrack() {
     var t = trackOf(S.pos.track), first = readyIn(t).filter(function (c) { return !S.done[c.id]; })[0] || readyIn(t)[0];
     var h = '<div class="wrap"><div><div class="kicker">Track ' + (trackIndex(t) + 1) + ' of ' + A.tracks.length + '</div><h1>' + esc(t.title) + '</h1><p class="muted">' + esc(t.blurb) + '</p>' +
-      (first ? '<p style="margin:0"><button type="button" class="btn primary" data-concept="' + first.id + '">' + (S.done[first.id] ? 'Replay: ' : 'Start: ') + esc(first.title) + '</button></p>' : '<p class="muted" style="margin:0">No lesson in this track yet. Tracks 1 to 3 are ready.</p>') + '</div><div class="path">';
+      (first ? '<p style="margin:0"><button type="button" class="btn primary" data-concept="' + first.id + '">' + (S.done[first.id] ? 'Replay: ' : 'Start: ') + esc(first.title) + '</button></p>' : '<p class="muted" style="margin:0">No lesson in this track yet. Tracks 1 to 3 and 9 are ready.</p>') + '</div><div class="path">';
     t.concepts.forEach(function (c, i) {
       var ok = !!A.lessons[c.id], pct = setPct(c.id);
       h += '<button type="button" class="node' + (c.id === S.pos.concept ? ' cur' : '') + '"' + (ok ? ' data-concept="' + c.id + '"' : ' disabled') + '><span class="dot">' + ring(pct, 56, '') + '<span>' + (i + 1) + '</span></span><span><h3>' + esc(c.title) + '</h3><p>' + (ok ? esc(c.idea || '') + (S.done[c.id] ? ' · done' : '') : 'Coming soon') + '</p></span></button>';

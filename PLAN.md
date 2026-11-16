@@ -22,7 +22,7 @@ Four stops, one control (a slider, `-` and `+`, pinch or Ctrl-wheel), breadcrumb
 6. **Risk and governance**: data leakage, hallucination, IP, bias, prompt injection, human in the loop (generic; nothing from any employer or client)
 7. **Cost and operations**: tokens as cost, latency, caching, choosing a model size
 8. **Tools in practice**: Copilot, Claude, Devin, plus a template to add your own
-9. **Agile x AI**: planning, estimation, ceremonies, delivery, risk, metrics, change management (also threaded through every concept above)
+9. **Agile x AI**: built as **AI-DLC** (AWS's AI-driven development life cycle) and how to bring a team along: why a new life cycle, the plan-ask-validate-build loop, three phases and who does what, rollout, evidence, rehearsal. Estimation, metrics and wider change management are still to come (also threaded through every concept above)
 
 ## Roles family tree (from your reference; built)
 Ian Miell's family tree of 104 software job titles (https://ianmiell.github.io/sw-job-title-family-tree/, post at zwischenzugs.com, 2026-11-03) is the model: click a family to filter, click a title for its history, solid arrows grew out of, dashed arrows influence or a common move, dates are his estimates. We will link to it and credit him, and build **our own** small tree of AI-era roles in our own words (DevOps, SRE, platform engineering, ML engineer, AI Agent / Context Engineer, and where Agile Coach, PM and Scrum Master sit and are heading). Three uses: a "zoom out" lesson on how roles evolve, a tree view inside the Academy (same zoom as the Map, each node opens a big-type Read more), and quiz cards on it. **Licence:** the repo shows no licence file and the post states no reuse terms, so we copy none of his titles list, dates or text.
@@ -40,10 +40,11 @@ Local only; progress in your browser's storage plus Save/Load to a file; no comp
 Agentboard's: the same tokens, light and dark, cards, rings, calm motion (reduced-motion respected). System fonts, so it works offline.
 
 ## Built so far
-Open `index.html`. Tracks 1, 2 and 3 are complete (16 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 4 to 9 are outlined on the Map and greyed. Checks live in `tests/run.js`.
+Open `index.html`. Tracks 1, 2, 3 and 9 are complete (22 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 4 to 8 are outlined on the Map and greyed. Checks live in `tests/run.js`.
 
 ## Decisions taken while building (simplest option each time)
 1. The Map stays the home screen; the roles tree is a second map behind a switch at the top.
 2. Tone: plain, with a light touch of playful.
 3. The roles tree has no timeline, only an earlier-to-later order, and the few dated facts on role pages come from their own sources (R2 to R10), so none of Ian Miell's dates are echoed and nothing unsourced is implied.
 4. Track 2 has six lessons (a "roles" lesson was added to the five outlined).
+5. Track 9 was built ahead of tracks 4 to 8, for interview preparation on AI-DLC. Examples in it are generic and name no real app, because the repo may be shared. Bungay's three gaps (knowledge, alignment, effects) sit in one paragraph of the gates lesson, where they fit. The culture models from Tribal Leadership and Reinventing Organizations are left out until something fits; add them where they do.

@@ -46,6 +46,29 @@ Checked on 2026-11-14 by web search summaries, same caveat as above: none of the
 
 Track 3 also reuses R8 (Anthropic, "Effective context engineering for AI agents") for agents keeping notes outside the window.
 
+## Sources used in track 9 (Agile x AI: AI-DLC)
+
+Checked on 2026-11-15. A1 to A3 were fetched through a page-fetch tool that returns a **summary** of the page, not the page itself, and it said the A1 text it received was **truncated**. So these are better than a search snippet and still weaker than reading the page. Read the originals before you repeat any of this in a meeting. Nothing here comes from any employer or client. The examples in these lessons are generic and name no real app.
+
+| Id | Source | What the app takes from it | Status |
+|---|---|---|---|
+| A1 | AWS DevOps & Developer Productivity Blog (2025), "AI-Driven Development Life Cycle". https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle (a secondary source dates it 31 July 2025; not confirmed here) | The problem it names (methods built for slow, human-driven work; AI added as assistant or as autonomous generator, both with weak results); the pattern of plan, clarifying questions, human validation, then build, repeated for every activity; three phases (Inception, Construction, Operations); the rituals Mob Elaboration and Mob Construction, named but not described; units of work replace epics; bolts replace sprints, in hours or days; context saved in the repository; stated benefits (velocity, innovation, quality, market responsiveness, developer experience) with no figures; the post does not cover ritual mechanics, migration, governance, cost, failure modes or fit | fetch summary of a page reported as truncated; **verify**. The white paper it links was **not reached** |
+| A2 | AI-DLC Workflows documentation, AWS Labs. https://awslabs.github.io/aidlc-workflows/ | The open tooling's phases (Initialization, Ideation, Inception, Construction, Operation) with numbered stages; supported coding tools; plans named classic, feature, express, poc and mvp; a guided onboarding path, a Facilitator Guide, a workshop mode for multi-team construction; the Rules and learning-loop pages | fetch summary of the front page; the linked pages were not read; **verify**. Version numbers were **not** taken: the docs and search results disagree |
+| A3 | AI-DLC Workflows, "Getting Started". https://awslabs.github.io/aidlc-workflows/guide/01-getting-started/ | A reviewer agent checks each stage and a person chooses Approve or Request Changes; one example plan has 19 gates; an audit folder keeps every question, answer and approval; which shared files a team commits and which personal settings stay out of git; where work is stored | fetch summary; **verify** |
+| A4 | awslabs/aidlc-workflows on GitHub. https://github.com/awslabs/aidlc-workflows | That AWS Labs publishes the workflow rules there | seen in search results only; not opened; **verify**. A licence (MIT-0 was reported by a third party) is **not** stated in the app |
+| A5 | Scrum.org, "Spec-driven development isn't waterfall unless you're using it that way". https://www.scrum.org/resources/blog/spec-driven-development-isnt-waterfall-unless-youre-using-it-way | Only that the post exists and what its title says. A general debate about spec-driven development, not about AI-DLC | title and search summary only; **verify** |
+| B1 | Stephen Bungay (2011), *The Art of Action: How Leaders Close the Gaps between Plans, Actions and Results*, as described in strategy+business, "Closing Implementation Gaps". https://strategy-business.com/article/11312a | The three gaps: knowledge (what we would like to know and what we know), alignment (what we want people to do and what they do), effects (what our actions should achieve and what they achieve). Used in one paragraph of "Plan, ask, validate, build". The mapping of gates onto the gaps is **my reading**, not Bungay's or AWS's | search summaries of reviews and articles (RAF Air Power Review, Cranfield, strategy+business); the book was **not read**; **verify**. His remedy ("directed opportunism", from mission command) is not used |
+
+Track 9 also reuses S25 (OWASP, excessive agency) and S26 (the lethal trifecta).
+
+### Looked for and not found
+
+- The AI-DLC white paper ("Method Definition", credited to Raja SP of AWS by secondary sources). Not reached, so nothing in the lessons depends on it.
+- Any independent evaluation, trial or critique of **AI-DLC itself**. I found only general writing about spec-driven development. The lessons say so.
+- How the Mob Elaboration and Mob Construction sessions are run (format, length, who attends). The post does not say.
+- Anything on how AI-DLC fits with Scrum, SAFe or any other framework.
+- Whether any version number or licence quoted by search results is current. None is used.
+
 ## Sources used in the roles family tree
 
 | Id | Source | What the app takes from it | Status |
@@ -81,10 +104,12 @@ These are marked in the lesson text with "(Teaching judgment.)", "(My framing.)"
 - How structured output features work (restricting which tokens can be picked): a general description. Verify for your provider.
 - In track 3: "95% a step over 20 steps is about 36%" is arithmetic (0.95 to the power 20), assuming every step fails independently and equally often. It is an illustration, not a measurement of any tool. The retry figure assumes a check catches every failure.
 - In track 3: that an agent can report "done" when it is not; the three kinds of memory; that memory can go stale, leak or carry a planted instruction; that a plan can drift in a long run; and why prompt injection is hard to fix (one stream of tokens). Common explanations, not checked against one source.
+- In track 9: the pairings in "Why a new life cycle" marked "My mapping" (intent, backlog refinement, build and review, Definition of Done); the sorting in "Three phases, who does what" and its reasons; the rollout order, the pilot-then-widen advice and the coach's role in "Bringing a team along"; the suggested measures and the reasoning on why a pilot gain is not proof in "What the evidence says"; the sample answers in "Rehearse the conversation"; and the claim that trying to recall before looking helps memory (a general finding in learning research, no source cited). Also the "Agile lens" and "In practice" lines, as in every track.
 - In the roles tree: everything under "What AI changes", "What to learn" and "Where it is heading"; the "AI enablement coach" node (my observation, no source); the "Delivery lead for human and agent teams" node (a **forecast**, labelled so in the app); the order of the rows; and which arrows are drawn.
 
 ## Things in the app that are made up on purpose
 
 - The toy tokenizer's pieces and numbers, the next-word scores, the tiny trainable model, Team Heron and its page, the seven readings of the status-line request, the four role answers, the five risk formats, the iterate test cases, the tool-use answers and ticket HER-42, the seven-step agent run, the export plan and the memory session are all written by hand. No model produced them and none runs in the app.
+- In track 9: the example app, its rider-schedule export, the three formats and their file counts; the gates-on and gates-off runs; the twelve sorting tasks; the rollout steps; the eight statements about the sources; and the five rehearsal questions with their sample answers are written by hand. Nothing in them is a real app, a real team or real data.
 - The sandbox's score is keyword matching. It is not a measure of prompt quality.
 - Example data in the sandbox (`jo.sample@example.com`, `4000 1234 5678 9010`, "Mr Sample") is invented.

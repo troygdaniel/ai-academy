@@ -489,7 +489,7 @@ var WIDGETS = {};
 
   // ---------- Planning: order the steps, place the checkpoints ----------
   WIDGETS.planning = function (root, L) {
-    var st = mem('planning', { order: L.start.slice(), gate: {} });
+    var st = mem('planning:' + L.goal, { order: L.start.slice(), gate: {} }); // one memory per lesson that uses this picture
     function byId(id) { return L.steps.filter(function (s) { return s.id === id; })[0]; }
     function problems(order) { var out = []; order.forEach(function (id, i) { byId(id).needs.forEach(function (n) { if (order.indexOf(n) > i) out.push('"' + byId(id).text + '" comes before "' + byId(n).text + '", which it needs.'); }); }); return out; }
     WIDGETS._planProblems = function (order) { return problems(order).length; };
@@ -505,9 +505,9 @@ var WIDGETS = {};
       o.className = 'verdict ' + (p.length ? 'bad' : 'ok');
       o.textContent = p.length ? 'The order does not work yet: ' + p[0] + (p.length > 1 ? ' And ' + (p.length - 1) + ' more.' : '') : 'The order works: every step has what it needs before it starts.';
       g.className = 'verdict ' + (st.gate[risky.id] && gates.length <= 2 ? 'ok' : 'bad');
-      g.textContent = !st.gate[risky.id] ? 'Nobody approves "' + risky.text + '". It is the one step here that cannot be undone and that customers see.'
+      g.textContent = !st.gate[risky.id] ? 'Nobody approves "' + risky.text + '". ' + (L.riskNote || 'It is the one step here that cannot be undone and that customers see.')
         : gates.length > 2 ? gates.length + ' approvals. Safe, but you are now the bottleneck, and people who approve everything stop reading. Keep the ones where a mistake is expensive.'
-          : 'A person approves the deploy, and the steps that can be undone are left to flow.';
+          : (L.okNote || 'A person approves the deploy, and the steps that can be undone are left to flow.');
     }
     root.addEventListener('change', function (e) { var id = e.target.dataset.gate; if (id) { st.gate[id] = e.target.checked; update(); $('[data-gate="' + id + '"]', root).focus(); } });
     onClick(root, function (d) {
@@ -583,5 +583,127 @@ var WIDGETS = {};
       update();
     });
     update();
+  };
+
+  // ---------- Track 9, AI-DLC: classic Agile words and their nearest AI-DLC terms ----------
+  WIDGETS.terms = function (root, L) {
+    var st = mem('terms', { i: 0 });
+    root.innerHTML = '<p class="note" style="margin:0 0 6px">Pick a classic Agile word:</p><div class="exs" id="tm-pick"></div><div id="tm-card" aria-live="polite"></div>';
+    function update() {
+      var t = L.terms[st.i], aws = t.source === 'aws';
+      $('#tm-pick', root).innerHTML = L.terms.map(function (x, i) { return '<button type="button" data-t="' + i + '"' + (i === st.i ? ' class="on"' : '') + '>' + esc(x.old) + '</button>'; }).join('');
+      $('#tm-card', root).innerHTML = '<div class="two"><div class="card"><h3>Classic Agile</h3><p><b>' + esc(t.old) + '</b></p></div>' +
+        '<div class="card"><h3>In AI-DLC</h3><p><b>' + esc(t.now) + '</b> <span class="tag' + (aws ? ' go' : '') + '">' + (aws ? 'AWS says' : 'My mapping') + '</span></p></div></div>' +
+        '<p class="verdict"><b>Stays the same:</b> ' + esc(t.same) + '</p><p class="verdict"><b>Changes:</b> ' + esc(t.diff) + '</p>';
+    }
+    onClick(root, function (d) { if (d.t === undefined) return; st.i = +d.t; update(); $('[data-t="' + st.i + '"]', root).focus(); });
+    update();
+  };
+
+  // ---------- Track 9: plan, ask, validate, build, with the gates on or off ----------
+  WIDGETS.gates = function (root, L) {
+    var st = mem('gates', { need: 'cal', gates: true });
+    function opt(id) { return L.options.filter(function (o) { return o.id === id; })[0]; }
+    root.innerHTML = '<p class="prompt" style="font-size:16px">Intent: ' + esc(L.intent) + '</p>' +
+      '<fieldset class="seg"><legend>What riders really need (you know this, and the AI does not)</legend>' + L.options.map(function (o) { return '<label><input type="radio" name="gt-need" data-need="' + o.id + '"> ' + esc(o.label) + '</label>'; }).join('') + '</fieldset>' +
+      '<label class="check" style="margin-top:10px"><input type="checkbox" id="gt-on"> Gates on: the AI asks, and a person approves, before it builds</label>' +
+      '<ol class="trace" id="gt-trace"></ol><p class="verdict" id="gt-verdict" role="status"></p>';
+    function ai(t) { return '<li class="app"><span class="who">The AI</span>' + t + '</li>'; }
+    function you(t) { return '<li class="you"><span class="who">You</span>' + t + '</li>'; }
+    function update() {
+      var need = opt(st.need), guess = opt(L.guess), h, cls, msg;
+      $$('input[name="gt-need"]', root).forEach(function (r) { r.checked = r.dataset.need === st.need; });
+      $('#gt-on', root).checked = st.gates;
+      h = ai('Drafts a plan: ' + esc(L.plan.join('; ')) + '.');
+      if (st.gates) {
+        h += ai('Asks: "' + esc(L.question) + '"') + you('Answer: ' + esc(need.label) + '. Approve the plan.') + ai('Builds ' + esc(need.built) + '.') + ai('Keeps a record: the question, your answer and your approval.');
+        cls = 'ok'; msg = 'The question cost one sentence. The AI built what riders needed, and the record shows who decided what.';
+      } else {
+        h += ai('Picks a format itself, with nobody asked: ' + esc(guess.label) + '.') + ai('Builds ' + esc(guess.built) + '.');
+        if (need.id === guess.id) { cls = ''; msg = 'It matched, but only by luck: nobody asked, so nobody knew. There is no record of the choice either.'; }
+        else { cls = 'bad'; msg = 'It built the wrong thing, and you find out in review, after the work is done. The question at the gate would have cost one sentence.'; }
+      }
+      $('#gt-trace', root).innerHTML = h;
+      $('#gt-verdict', root).className = 'verdict' + (cls ? ' ' + cls : ''); $('#gt-verdict', root).textContent = msg;
+    }
+    root.addEventListener('change', function (e) {
+      var t = e.target, sel;
+      if (t.dataset.need) { st.need = t.dataset.need; sel = '[data-need="' + st.need + '"]'; } else if (t.id === 'gt-on') { st.gates = t.checked; sel = '#gt-on'; } else return;
+      update(); $(sel, root).focus();
+    });
+    update();
+  };
+
+  // ---------- Track 9: who handles each task in each phase ----------
+  WIDGETS.whodoes = function (root, L) {
+    var st = mem('whodoes', { p: 0, a: {} });
+    root.innerHTML = '<div class="exs" id="wd-tabs"></div><div id="wd-body"></div><p class="note" id="wd-score" role="status"></p>';
+    function bucket(id) { return L.buckets.filter(function (b) { return b.id === id; })[0]; }
+    function update() {
+      var ph = L.phases[st.p], right = 0, done = 0;
+      $('#wd-tabs', root).innerHTML = L.phases.map(function (x, i) { return '<button type="button" data-p="' + i + '"' + (i === st.p ? ' class="on"' : '') + '>' + esc(x.title) + '</button>'; }).join('');
+      $('#wd-body', root).innerHTML = ph.cards.map(function (c) {
+        var pick = st.a[c.id], fb = '';
+        if (pick) { done++; if (pick === c.to) right++; fb = '<p class="verdict ' + (pick === c.to ? 'ok' : 'bad') + '">' + (pick === c.to ? '' : 'I would sort this as "' + esc(bucket(c.to).label) + '". ') + esc(c.why) + '</p>'; }
+        return '<fieldset class="seg" style="margin-top:10px"><legend>' + esc(c.text) + '</legend>' + L.buckets.map(function (b) {
+          return '<label><input type="radio" name="wd-' + c.id + '" data-card="' + c.id + '" data-b="' + b.id + '"' + (pick === b.id ? ' checked' : '') + '> ' + esc(b.label) + '</label>';
+        }).join('') + fb + '</fieldset>';
+      }).join('');
+      $('#wd-score', root).textContent = done ? right + ' of ' + done + ' match my sorting in ' + ph.title + '. These are judgments, so a different answer with a reason is fine.' : 'Sort the tasks for ' + ph.title + '.';
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset; if (!d.card) return;
+      st.a[d.card] = d.b; update(); $('[data-card="' + d.card + '"][data-b="' + d.b + '"]', root).focus();
+    });
+    onClick(root, function (d) { if (d.p === undefined) return; st.p = +d.p; update(); $('[data-p="' + st.p + '"]', root).focus(); });
+    update();
+  };
+
+  // ---------- Track 9: said in the sources, or not ----------
+  WIDGETS.claims = function (root, L) {
+    var st = mem('claims', { a: {} });
+    root.innerHTML = '<div id="cl-body"></div><p class="note" id="cl-score" role="status"></p>';
+    function update() {
+      var right = 0, done = 0;
+      $('#cl-body', root).innerHTML = L.claims.map(function (c) {
+        var pick = st.a[c.id], fb = '', good;
+        if (pick) { good = (pick === 'said') === c.said; done++; if (good) right++; fb = '<p class="verdict ' + (good ? 'ok' : 'bad') + '">' + (c.said ? 'Said. ' : 'Not said in what I read. ') + esc(c.why) + '</p>'; }
+        return '<fieldset class="seg" style="margin-top:10px"><legend>' + esc(c.text) + '</legend>' +
+          '<label><input type="radio" name="cl-' + c.id + '" data-claim="' + c.id + '" data-v="said"' + (pick === 'said' ? ' checked' : '') + '> Said in what I read</label>' +
+          '<label><input type="radio" name="cl-' + c.id + '" data-claim="' + c.id + '" data-v="not"' + (pick === 'not' ? ' checked' : '') + '> Not said in what I read</label>' + fb + '</fieldset>';
+      }).join('');
+      $('#cl-score', root).textContent = done ? right + ' of ' + done + ' right so far, out of ' + L.claims.length + '.' : 'Decide each one, then read why.';
+    }
+    root.addEventListener('change', function (e) {
+      var d = e.target.dataset; if (!d.claim) return;
+      st.a[d.claim] = d.v; update(); $('[data-claim="' + d.claim + '"][data-v="' + d.v + '"]', root).focus();
+    });
+    update();
+  };
+
+  // ---------- Track 9: write your own answer first, then compare ----------
+  WIDGETS.rehearse = function (root, L) {
+    var st = mem('rehearse', { i: 0, text: {}, shown: {} }), MIN = 30;
+    root.innerHTML = '<div class="exs" id="rh-pick"></div><p class="prompt" id="rh-q" style="font-size:16px"></p>' +
+      '<textarea class="wtext tall" id="rh-in" maxlength="1500" aria-label="Your answer, in your own words" placeholder="Write your answer first, in your own words."></textarea>' +
+      '<div class="row" style="margin-top:8px"><button type="button" class="btn primary" id="rh-show" data-a="show" disabled>Show a sample answer</button><span class="note" id="rh-hint"></span></div>' +
+      '<div id="rh-sample" tabindex="-1" aria-live="polite"></div>';
+    var ta = $('#rh-in', root);
+    function cur() { return L.prompts[st.i]; }
+    function draw() {
+      var p = cur(), len = (st.text[p.id] || '').trim().length, shown = !!st.shown[p.id];
+      $('#rh-pick', root).innerHTML = L.prompts.map(function (x, i) { return '<button type="button" data-q="' + i + '"' + (i === st.i ? ' class="on"' : '') + '>Question ' + (i + 1) + '</button>'; }).join('');
+      $('#rh-q', root).textContent = p.q;
+      $('#rh-show', root).disabled = shown || len < MIN;
+      $('#rh-hint', root).textContent = shown ? '' : (len < MIN ? ' Write at least a sentence first.' : '');
+      $('#rh-sample', root).innerHTML = shown ? '<div class="msg sum" style="margin-top:10px"><span class="who">Sample answer</span>' + esc(p.sample) + '</div><p class="note">What did the sample say that yours did not? What did yours say that it did not?</p>' : '';
+    }
+    function load() { ta.value = st.text[cur().id] || ''; draw(); }
+    root.addEventListener('input', function (e) { if (e.target.id !== 'rh-in') return; st.text[cur().id] = ta.value; draw(); });
+    onClick(root, function (d) {
+      if (d.q !== undefined) { st.i = +d.q; load(); $('[data-q="' + st.i + '"]', root).focus(); }
+      else if (d.a === 'show') { st.shown[cur().id] = true; draw(); $('#rh-sample', root).focus(); }
+    });
+    load();
   };
 })();

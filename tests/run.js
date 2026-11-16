@@ -60,8 +60,9 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
     return out;
   });
   eq(shape.bad, [], 'all lessons, roles and questions are well formed');
-  eq(shape.lessons.length, 16, 'sixteen lessons');
+  eq(shape.lessons.length, 22, 'twenty-two lessons');
   eq(shape.tracks.slice(0, 4), [5, 6, 5, 0], 'track 1 has five lessons, track 2 has six, track 3 has five, track 4 none yet');
+  eq(shape.tracks[8], 6, 'track 9 (Agile x AI, AI-DLC) has six lessons');
   ok(!shape.dupe, 'question ids are unique');
   const md = fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
   const srcIds = await D(page, () => ACADEMY.sources.map(s => s.id));
@@ -232,6 +233,59 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
   await setRange(page, '#ch-n', 1); await page.uncheck('#ch-check');
   ok(/95%/.test(await text(page, '#ch-out')), 'where agents fail: one step is just the single-step rate');
 
+  // ------------------------------------------------------------------ track 9: AI-DLC
+  section('Track 9: AI-DLC');
+  await goLesson(page, 'agile', 'aidlc');
+  eq(await page.locator('#tm-pick button').count(), 6, 'AI-DLC terms: six classic words to pick from');
+  await page.click('#widget [data-t="0"]');
+  ok(/Bolt/.test(await text(page, '#tm-card')) && /AWS says/.test(await text(page, '#tm-card')), 'AI-DLC terms: a sprint becomes a bolt, marked as what AWS says');
+  await page.click('#widget [data-t="3"]');
+  ok(/Mob Elaboration/.test(await text(page, '#tm-card')) && /My mapping/.test(await text(page, '#tm-card')), 'AI-DLC terms: the refinement pairing is marked as my mapping, not AWS');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.t === '3'), 'AI-DLC terms: focus stays on the word you picked');
+
+  await goLesson(page, 'agile', 'aigates');
+  ok((await page.locator('#gt-verdict').getAttribute('class')).includes('ok') && /record/i.test(await text(page, '#gt-trace')), 'gates on: the AI asks, builds what was needed and keeps a record');
+  await page.uncheck('#gt-on');
+  ok((await page.locator('#gt-verdict').getAttribute('class')).includes('bad') && /printable/.test(await text(page, '#gt-trace')), 'gates off: the AI guesses a printable page and the calendar need is missed');
+  await page.check('#widget [data-need="pdf"]');
+  ok(!(await page.locator('#gt-verdict').getAttribute('class')).includes('bad') && /luck/.test(await text(page, '#gt-verdict')), 'gates off: a matching guess is called luck, with no record');
+
+  await goLesson(page, 'agile', 'aiphases');
+  await page.check('#widget [data-card="i1"][data-b="draft"]');
+  ok(/1 of 1/.test(await text(page, '#wd-score')), 'phases: a match with my sorting is counted');
+  await page.check('#widget [data-card="i2"][data-b="ai"]');
+  ok(/1 of 2/.test(await text(page, '#wd-score')) && /A person decides/.test(await text(page, '#wd-body')), 'phases: a different choice is shown my sorting and the reason');
+  await page.click('#widget [data-p="2"]');
+  ok(/Operations/.test(await text(page, '#wd-score')) && await page.locator('#wd-body fieldset').count() === 4, 'phases: the Operations tab shows its own four tasks');
+  eq(await D(page, () => { const L = ACADEMY.lessons.aiphases, ids = [], b = L.buckets.map(x => x.id); let bad = 0; L.phases.forEach(p => p.cards.forEach(c => { ids.push(c.id); if (b.indexOf(c.to) < 0) bad++; })); return [ids.length, new Set(ids).size, bad]; }), [12, 12, 0], 'phases: twelve tasks, unique ids, each sorted into a real bucket');
+
+  await goLesson(page, 'agile', 'airollout');
+  ok((await page.locator('#pl-order').getAttribute('class')).includes('bad') && (await page.locator('#pl-gate').getAttribute('class')).includes('bad'), 'rollout: the starting order is broken and widening has no approval');
+  ok(/reaches many people/.test(await text(page, '#pl-gate')), 'rollout: the warning uses its own reason, not the deploy one');
+  await page.check('#widget [data-gate="widen"]');
+  ok((await page.locator('#pl-gate').getAttribute('class')).includes('ok') && /before the rollout widens/.test(await text(page, '#pl-gate')), 'rollout: a person approving the widening is enough');
+  eq(await D(page, () => [WIDGETS._planProblems(['pilot', 'rules', 'setup', 'week', 'retro', 'widen']), WIDGETS._planProblems(['pilot', 'setup', 'rules', 'week', 'retro', 'widen']), WIDGETS._planProblems(['widen', 'week', 'pilot', 'retro', 'setup', 'rules'])]), [0, 1, 3], 'rollout: only the right order has no problems');
+  await goLesson(page, 'agents', 'planning');
+  ok(/Read the existing reports code|Write the export code/.test(await text(page, '#pl-list')) && !/willing team/.test(await text(page, '#pl-list')), 'rollout and planning keep separate memory of their own steps');
+
+  await goLesson(page, 'agile', 'aievidence');
+  await page.check('#widget [data-claim="e1"][data-v="said"]');
+  await page.check('#widget [data-claim="e2"][data-v="said"]');
+  ok(/1 of 2 right/.test(await text(page, '#cl-score')) && /no study or figures/.test(await text(page, '#cl-body')), 'evidence: marking an unsourced claim as said is wrong, and the reason is shown');
+  eq(await D(page, () => ACADEMY.lessons.aievidence.claims.map(c => c.said).filter(Boolean).length), 4, 'evidence: four of the eight statements are said in the sources and four are not');
+
+  await goLesson(page, 'agile', 'airehearse');
+  ok(await page.locator('#rh-show').isDisabled(), 'rehearse: the sample answer is locked until you write something');
+  await page.fill('#rh-in', 'AI-DLC is a method that makes AI the engine of each step, with people validating.');
+  ok(await page.locator('#rh-show').isEnabled(), 'rehearse: writing a sentence unlocks it');
+  await page.click('#rh-show');
+  ok(/sample answer/i.test(await text(page, '#rh-sample')), 'rehearse: the sample shows after your own answer');
+  await page.click('#widget [data-q="1"]');
+  ok(await page.locator('#rh-show').isDisabled() && (await page.inputValue('#rh-in')) === '', 'rehearse: the next question starts empty and locked');
+  await page.click('#widget [data-q="0"]');
+  ok((await page.inputValue('#rh-in')).startsWith('AI-DLC is a method'), 'rehearse: your answer is kept while you move between questions');
+  ok(await D(page, () => !/AI-DLC is a method/.test(JSON.stringify(ACADEMY_DEBUG.state()))), 'rehearse: what you write is not saved in your progress');
+
   // ------------------------------------------------------------------ sandbox
   section('Prompt sandbox');
   await goLesson(page, 'prompting', 'judge');
@@ -400,8 +454,11 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
   ok(await noSideScroll(page), 'map');
   ok(await D(page, () => { const z = document.querySelector('#zoombar').getBoundingClientRect(); return z.left >= 0 && z.right <= innerWidth; }), 'the zoom bar fits on screen');
   await D(page, () => ACADEMY_DEBUG.go(1, 'models')); ok(await noSideScroll(page), 'track');
-  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge'], ['agents', 'tooluse'], ['agents', 'loop'], ['agents', 'planning'], ['agents', 'memory'], ['agents', 'agentfail']]) {
+  for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge'], ['agents', 'tooluse'], ['agents', 'loop'], ['agents', 'planning'], ['agents', 'memory'], ['agents', 'agentfail'], ['agile', 'aidlc'], ['agile', 'aigates'], ['agile', 'aiphases'], ['agile', 'airollout'], ['agile', 'aievidence'], ['agile', 'airehearse']]) {
     await goLesson(page, t, c);
+    if (c === 'aiphases') await page.locator('#widget [data-card="i2"][data-b="ai"]').check();
+    if (c === 'aievidence') await page.locator('#widget [data-claim="e2"][data-v="said"]').check();
+    if (c === 'airehearse') { await page.fill('#rh-in', 'A sentence of my own, long enough to unlock the sample answer.'); await page.locator('#rh-show').tap(); }
     if (c === 'training') await page.click('#widget [data-a="train"]');
     if (c === 'format') await page.click('#widget [data-f="2"]');
     if (c === 'judge') await page.click('#widget [data-ex="3"]');

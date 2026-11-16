@@ -40,8 +40,13 @@ var ACADEMY = {
     { id: 'tools', title: 'Tools in practice', blurb: 'Copilot, Claude, Devin and how to add any other tool.', concepts: [
       { id: 'copilot', title: 'Copilot' }, { id: 'claude', title: 'Claude' }, { id: 'devin', title: 'Devin' }, { id: 'yours', title: 'Add your own' }
     ] },
-    { id: 'agile', title: 'Agile x AI', blurb: 'Planning, estimating, ceremonies, delivery, risk, metrics, change.', concepts: [
-      { id: 'plan', title: 'Planning and estimating' }, { id: 'cere', title: 'Ceremonies' }, { id: 'metrics', title: 'Metrics' }, { id: 'change', title: 'Change management' }
+    { id: 'agile', title: 'Agile x AI', blurb: 'AI-DLC, a delivery life cycle built around AI, and how to bring a team along.', concepts: [
+      { id: 'aidlc', title: 'Why a new life cycle', idea: 'AI as the engine, not a helper added on.' },
+      { id: 'aigates', title: 'Plan, ask, validate, build', idea: 'The loop, with a person at each gate.' },
+      { id: 'aiphases', title: 'Three phases, who does what', idea: 'Inception, Construction, Operations.' },
+      { id: 'airollout', title: 'Bringing a team along', idea: 'Pilot, shared rules, a guided week, then widen.' },
+      { id: 'aievidence', title: 'What the evidence says', idea: 'What is sourced, what is claimed, what is unproven.' },
+      { id: 'airehearse', title: 'Rehearse the conversation', idea: 'Say it in your own words, then compare.' }
     ] }
   ],
 
@@ -87,7 +92,13 @@ var ACADEMY = {
     { id: 'R7', title: 'Shawn Wang (2023): The Rise of the AI Engineer, Latent Space', url: 'https://www.latent.space/p/ai-engineer', note: 'The essay the title is usually traced to. Not opened; the link is from memory.' },
     { id: 'R8', title: 'Anthropic Engineering (2025): Effective context engineering for AI agents', url: 'https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents', note: 'Context engineering as curating and maintaining the optimal set of tokens during inference; the natural progression of prompt engineering.' },
     { id: 'R9', title: 'Schwaber and Sutherland (2020): The Scrum Guide', url: 'https://scrumguides.org/scrum-guide.html', note: 'The Scrum Master is accountable for establishing Scrum and for the Scrum Team\'s effectiveness.' },
-    { id: 'R10', title: 'Agile Manifesto: History', url: 'https://agilemanifesto.org/history.html', note: 'Seventeen people met at Snowbird, Utah, on 11 to 13 February 2001.' }
+    { id: 'R10', title: 'Agile Manifesto: History', url: 'https://agilemanifesto.org/history.html', note: 'Seventeen people met at Snowbird, Utah, on 11 to 13 February 2001.' },
+    { id: 'A1', title: 'AWS DevOps & Developer Productivity Blog (2025): AI-Driven Development Life Cycle', url: 'https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle', note: 'The method\'s own post: AI as the engine of each activity, a plan-ask-validate pattern, three phases, units of work and bolts. Read through a fetch tool that reported the page as truncated.' },
+    { id: 'A2', title: 'AI-DLC Workflows documentation (AWS Labs)', url: 'https://awslabs.github.io/aidlc-workflows/', note: 'The open tooling: its phases and stages, supported coding tools, onboarding, facilitator and workshop pages. A fetch summary of the front page.' },
+    { id: 'A3', title: 'AI-DLC Workflows: Getting Started', url: 'https://awslabs.github.io/aidlc-workflows/guide/01-getting-started/', note: 'Approval gates after each stage, the audit folder, which files a team commits, and the pages it links for adapting to a team. A fetch summary.' },
+    { id: 'A4', title: 'awslabs/aidlc-workflows on GitHub', url: 'https://github.com/awslabs/aidlc-workflows', note: 'Where AWS Labs publishes the workflow rules. Seen in search results; not opened.' },
+    { id: 'A5', title: 'Scrum.org: Spec-driven development isn\'t waterfall unless you\'re using it that way', url: 'https://www.scrum.org/resources/blog/spec-driven-development-isnt-waterfall-unless-youre-using-it-way', note: 'A general debate about spec-driven development, a close cousin. Not about AI-DLC. Title and search summary only.' },
+    { id: 'B1', title: 'Stephen Bungay (2011): The Art of Action, as described in strategy+business, "Closing Implementation Gaps"', url: 'https://strategy-business.com/article/11312a', note: 'The three gaps between plans and results: knowledge, alignment and effects. Known here from reviews and summaries; the book was not read.' }
   ],
 
   lessons: {
@@ -576,6 +587,209 @@ var ACADEMY = {
         { id: 'agentfail.q2', q: 'What is indirect prompt injection?', opts: ['A user typing a rude prompt', 'Instructions hidden in content the agent reads, such as a web page or an email, that it then follows', 'A slow network', 'A model running out of tokens'], a: 1, why: 'The model cannot reliably separate data from instructions, so text it reads can steer it.' },
         { id: 'agentfail.q3', q: 'Which three things together make the "lethal trifecta"?', opts: ['Speed, cost and quality', 'Private data, untrusted content and a way to send things out', 'Tokens, context and temperature', 'Plan, do and check'], a: 1, why: 'With all three, planted text can make an agent send private data to an attacker. Remove one.' },
         { id: 'agentfail.q4', q: 'An agent needs to read tickets and draft replies. What access fits?', opts: ['Full admin, to be safe', 'Read tickets and write drafts; a person sends', 'Read and delete everything', 'Whatever the default is'], a: 1, why: 'Least privilege, with a human on the outward-facing step. That limits the damage if the agent is wrong or fooled.' }
+      ]
+    },
+    aidlc: {
+      widget: 'terms', src: ['A1', 'A2', 'A4'],
+      idea: 'AI-DLC is a method AWS published in 2025. It makes AI the engine of each step of building software, with people validating at set points, instead of adding an assistant to the old steps. It comes with new words for old ideas.',
+      tryit: 'Pick a classic Agile word and see what AI-DLC calls the nearest thing, what stays the same and what changes. Some pairings come straight from AWS. The others are my own comparison, and are marked.',
+      tryNote: 'A toy: a table written by hand. "AWS says" rows come from the AWS post. "My mapping" rows are my own comparison for Agile readers, not something AWS states.',
+      terms: [
+        { old: 'Sprint', now: 'Bolt', source: 'aws', same: 'A short cycle that ends with something the team can inspect.', diff: 'Measured in hours or days rather than weeks, per the AWS post.' },
+        { old: 'Epic', now: 'Unit of work', source: 'aws', same: 'A slice of the goal that delivers value on its own.', diff: 'It comes out of the Inception phase, after the team has validated what the AI proposed. The post says units replace epics.' },
+        { old: 'Product goal or user need', now: 'Intent', source: 'mine', same: 'The reason the work exists.', diff: 'The post uses "business intent" without defining it formally, and the tooling files work under "intents". The pairing with a product goal is mine.' },
+        { old: 'Backlog refinement', now: 'Mob Elaboration', source: 'mine', same: 'The team turns a rough goal into stories it understands.', diff: 'The AI drafts the questions and proposals first, and the whole team validates them together. The ritual is named in the post; the pairing with refinement is mine.' },
+        { old: 'Build and review', now: 'Mob Construction', source: 'mine', same: 'The team makes design and code choices and checks them.', diff: 'The AI proposes architecture, models, code and tests, and the team clarifies technical choices as it goes. The ritual is named in the post; the pairing is mine.' },
+        { old: 'Definition of Done', now: 'Approval gate', source: 'mine', same: 'A check before work counts as finished.', diff: 'In the tooling a reviewer agent checks each stage and a person chooses Approve or Request Changes. A loose pairing, and mine.' }
+      ],
+      read: [
+        { h: 'The problem it names', p: 'AWS argues that older methods were built for slow, human-driven work, with much time spent on planning, meetings and rituals. It says AI is usually added in one of two ways, as an assistant for single tasks or as an autonomous generator of whole applications, and that both have given weak results for speed and quality (A1). That is the author\'s view, not a measurement.' },
+        { h: 'The idea', p: 'AI-DLC makes AI the engine of each activity and keeps people for the decisions. The core pattern is that the AI makes a plan, asks clarifying questions, and builds only after a person validates. The same pattern repeats for every activity in the life cycle (A1).' },
+        { h: 'New words', p: 'Units of work replace epics, and bolts replace sprints. The plans, requirements and designs the AI works from are saved in the project repository, so work can continue across sessions (A1).' },
+        { h: 'What it is, and is not', p: 'It is a published method with open tooling, not a product you buy and not an industry standard. AWS Labs publishes the workflow rules on GitHub (A4), and the docs say they run inside several coding tools, not only AWS ones (A2).' },
+        { h: 'Your organisation\'s version', p: 'Organisations often wrap a published method in their own names and rules. Learn the original first, so you can tell what is the method and what is local. (Teaching judgment.)' }
+      ],
+      under: { h: 'Under the hood: the plan is text in a file', p: 'The saved context is ordinary files in the repository: plans, requirements, designs. A new session reads them back into the window, which is the memory idea from Track 3. Nothing about the model changes. What changes is which text is put in front of it, and who has to approve that text.' },
+      agile: 'Ask the retrospective question of your own rituals: which exist to coordinate people, and which exist to make up for slow drafting? AI-DLC bets that when drafting gets fast, the rituals shrink to the moments where people decide. Treat that as a bet to test, not a given.',
+      tools: 'Before you adopt any named method, find its primary source and read what it actually claims. Note which terms are the author\'s and which your organisation added. (Check against the current documents; they change.)',
+      quiz: [
+        { id: 'aidlc.q1', q: 'What problem does the AI-DLC post say it is addressing?', opts: ['AI models are too slow to use', 'Older methods were built for slow, human-driven work, and adding AI as an assistant keeps their inefficiencies', 'Teams have too few developers', 'Agile is not allowed in some regions'], a: 1, why: 'The post argues for rebuilding the life cycle around AI, not retrofitting an assistant onto the old one.' },
+        { id: 'aidlc.q2', q: 'In AI-DLC vocabulary, what replaces a sprint?', opts: ['A bolt', 'A unit', 'An intent', 'A gate'], a: 0, why: 'Bolts replace sprints, and units of work replace epics. Bolts are shorter: hours or days.' },
+        { id: 'aidlc.q3', q: 'What pattern does AI-DLC repeat for every activity?', opts: ['People write, and the AI reviews', 'The AI works alone and reports at the end', 'The AI makes a plan, asks clarifying questions, and builds after a person validates', 'The team votes on every line of code'], a: 2, why: 'Plan, ask, validate, then build. The person holds the business context the AI lacks.' },
+        { id: 'aidlc.q4', q: 'Your organisation presents its own version of AI-DLC with its own names. A sensible first step?', opts: ['Treat every local name as part of the original method', 'Read the published method first, so you can tell what is original and what is local', 'Wait until it becomes a formal standard', 'Skip the vocabulary and only use the tools'], a: 1, why: 'Knowing the source lets you explain it to others and spot where the local version differs.' }
+      ]
+    },
+    aigates: {
+      widget: 'gates', src: ['A1', 'A3', 'B1'],
+      idea: 'The heart of AI-DLC is one loop: the AI drafts a plan and asks questions, a person validates, and only then does it build. The gate is where a wrong assumption is cheapest to catch.',
+      tryit: 'Run the same job with the gates on, then off. Choose what riders really need, and see what gets built each way.',
+      tryNote: 'A toy with scripted steps. A real tool\'s plan, questions and results differ every run.',
+      intent: 'Riders should be able to export their pickup schedule.',
+      plan: ['read the schedule code', 'add the export', 'add tests'],
+      question: 'Which format should the export use?',
+      guess: 'pdf',
+      options: [
+        { id: 'csv', label: 'A spreadsheet file (CSV)', built: 'a spreadsheet export, 3 files changed' },
+        { id: 'pdf', label: 'A printable page (PDF)', built: 'a printable-page export, 11 files changed and a new library added' },
+        { id: 'cal', label: 'A calendar file', built: 'a calendar-file export, 4 files changed' }
+      ],
+      read: [
+        { h: 'The loop', p: 'In the AWS post the AI creates a plan, asks clarifying questions, and implements only after human validation. The pattern repeats for every activity in the life cycle (A1).' },
+        { h: 'Why ask first', p: 'The AI lacks your business context. A gate turns a hidden assumption into a visible question while changing it costs a sentence, not a rebuild. This is the cheap-plan idea from the Track 3 planning lesson. (Teaching judgment.)' },
+        { h: 'Three gaps, one lens', p: 'Stephen Bungay\'s book The Art of Action names three gaps between a plan and a result: knowledge (what we would like to know and what we know), alignment (what we want people to do and what they do), and effects (what our actions should achieve and what they achieve) (B1). In my reading the gates map onto them. The AI\'s questions address the knowledge gap, a plan a person validates addresses the alignment gap, and checking outcomes instead of reports addresses the effects gap. The mapping is mine, not AWS\'s or Bungay\'s.' },
+        { h: 'What a gate looks like in the tooling', p: 'In the open tooling, after each stage a reviewer agent checks the stage\'s documents and reports findings with severity levels, and you choose Approve or Request Changes. Every question, answer and approval is kept in an audit folder (A3).' },
+        { h: 'Gates cost attention', p: 'The docs show one example plan with 19 approval gates, and name lighter plans for smaller jobs, such as express and poc (A3). Track 3 warned what happens when you approve everything: people stop reading.' },
+        { h: 'The record', p: 'Because the questions and answers are kept, a reviewer can later see what was decided and by whom. Whether that satisfies any particular rule is for your own organisation to judge.' }
+      ],
+      under: { h: 'Under the hood: a gate is just a stop', p: 'A gate is the program around the model refusing to take the next step until a person answers. The model is not asked to be careful. The harness simply waits. That is why a gate still holds when the model is wrong or has been fooled, as in Track 3. (A general description; verify for your tool.)' },
+      agile: 'It is the Definition of Ready, applied to AI work: nothing starts until the questions are answered and a person has said yes. The record it leaves is a free audit trail for your retrospective.',
+      tools: 'In your tool, find where it stops and asks, where it just carries on, and whether the answers are saved. Try one small real job with every gate on and see what it asks that you would not have thought to. (Verify per tool.)',
+      quiz: [
+        { id: 'aigates.q1', q: 'The AI is about to build and has asked you nothing. What is the risk?', opts: ['None, because the AI knows the business', 'It builds on a guess about something only you know, and you find out after the work is done', 'The model forgets the question', 'The window is full'], a: 1, why: 'The AI lacks your business context. A question at the gate is the cheap moment to supply it.' },
+        { id: 'aigates.q2', q: 'In the AWS post, when does the AI implement?', opts: ['As soon as it reads the goal', 'Only after a second AI approves it', 'After it makes a plan, asks clarifying questions and a person validates', 'Whenever a test fails'], a: 2, why: 'Plan, ask, validate, then build.' },
+        { id: 'aigates.q3', q: 'What does the open tooling keep so you can see later what was decided?', opts: ['Nothing, it is all in the chat', 'An audit record of every question, answer and approval', 'Only the final code', 'A video of the session'], a: 1, why: 'The audit folder keeps each question, answer and approval as it happened.' },
+        { id: 'aigates.q4', q: 'What is the downside of an approval gate after every stage of every job?', opts: ['Nothing changes', 'The AI forgets earlier stages', 'The AI gets faster', 'People tire and stop reading, which is why lighter plans exist for small jobs'], a: 3, why: 'Gates everywhere turn into rubber-stamping. Match the plan to the size and risk of the job.' }
+      ]
+    },
+    aiphases: {
+      widget: 'whodoes', src: ['A1', 'A2', 'S25'],
+      idea: 'AI-DLC runs in phases: Inception, Construction and Operations. In each, the AI drafts and a person decides the things that need business context or are costly to undo. Sorting the work is the skill.',
+      tryit: 'For each task, choose who should handle it: the AI alone, the AI drafts and the team validates, or a person decides. Then compare with my reasoning.',
+      tryNote: 'A toy with my own answers. They are teaching judgments, not rules from AWS, and a real team may sort some of them differently.',
+      buckets: [
+        { id: 'ai', label: 'The AI alone' },
+        { id: 'draft', label: 'The AI drafts, the team validates' },
+        { id: 'person', label: 'A person decides' }
+      ],
+      phases: [
+        { id: 'inc', title: 'Inception', cards: [
+          { id: 'i1', text: 'Turn the business goal into a first set of user stories', to: 'draft', why: 'The AI is quick at drafting, but the stories only matter if the team agrees they mean the right thing.' },
+          { id: 'i2', text: 'Choose which business goal matters most this quarter', to: 'person', why: 'It rests on priorities and context the AI cannot see. The post says the AI defers critical decisions to people.' },
+          { id: 'i3', text: 'Suggest how the goal splits into units of work', to: 'draft', why: 'A good first cut for the AI, then the team checks that each unit is sound and can be built on its own.' },
+          { id: 'i4', text: 'Fix a typo in a story the team has already validated', to: 'ai', why: 'Low stakes, easy to undo, inside work that has already been validated.' }
+        ] },
+        { id: 'con', title: 'Construction', cards: [
+          { id: 'c1', text: 'Propose an architecture and domain model for a validated unit', to: 'draft', why: 'The post has the AI propose these and the team clarify the technical choices.' },
+          { id: 'c2', text: 'Write the code and tests for a validated unit', to: 'draft', why: 'The AI writes it. The team validates it by review and by running the tests.' },
+          { id: 'c3', text: 'Decide to keep customer data in a new place', to: 'person', why: 'Hard to undo, and it rests on policy and risk, not only on code.' },
+          { id: 'c4', text: 'Rename a variable inside a file the AI is already editing', to: 'ai', why: 'Small, easy to undo, and a review would catch it.' }
+        ] },
+        { id: 'ops', title: 'Operations', cards: [
+          { id: 'o1', text: 'Draft the infrastructure code and deployment steps', to: 'draft', why: 'The post has the AI handle these with team oversight.' },
+          { id: 'o2', text: 'Approve a deployment to the live site', to: 'person', why: 'Hard to undo and customers see it. OWASP\'s advice on excessive agency is a person approving high-impact actions.' },
+          { id: 'o3', text: 'Re-run the test suite after a change', to: 'ai', why: 'A read-only check that can be repeated. Steps like this can flow.' },
+          { id: 'o4', text: 'Decide whether to roll back a live release', to: 'person', why: 'A judgment about customers, risk and timing, made with the AI\'s information in front of the person.' }
+        ] }
+      ],
+      read: [
+        { h: 'Three phases in the AWS post', p: 'Inception turns a business intent into requirements, stories and units. Construction proposes architecture, domain models, code and tests. Operations handles infrastructure as code and deployment. Each phase passes richer context to the next (A1).' },
+        { h: 'The two team rituals', p: 'The post names Mob Elaboration, where the team validates the AI\'s questions and proposals in Inception, and Mob Construction, where it clarifies technical choices as the AI builds. It does not describe how long they run, who attends or how they are facilitated (A1). That is for your team to design.' },
+        { h: 'Five phases in the tooling', p: 'The open tooling lists Initialization, Ideation, Inception, Construction and Operation, each split into numbered stages (A2). The post has three phases and the tooling has five, so say which one you are describing.' },
+        { h: 'Who decides what', p: 'The post says the AI drafts plans and defers critical decisions to people, who hold the business and technical context (A1). Where the line falls for each task is a team judgment. A Track 3 rule helps: let steps you can undo flow, and put a person where a mistake is costly or faces outward (S25).' },
+        { h: 'Roles', p: 'The post says developers move from routine coding toward problem-solving and gain more business context, and that people work together in real time instead of alone (A1). It gives no evidence on how that plays out in practice.' }
+      ],
+      under: { h: 'Under the hood: each phase hands the next a file, not a memory', p: 'Each phase writes its results as documents in the repository, and the next phase reads them back into the window. The AI does not remember Inception when it reaches Construction. It re-reads what Inception wrote down. So the quality of those documents is the quality of the hand-off. (A1; A3 describes the stage folders.)' },
+      agile: 'Most coaches already sort work for people: what a team member can do alone, what needs a pairing or a review, and what needs the product owner. The only new part is that one team member is an AI with no business context.',
+      tools: 'For one real job, write down which steps your tool may do alone, which it should draft for review, and which need a person. Set the tool\'s approval settings to match, not the other way round. (Verify per tool.)',
+      quiz: [
+        { id: 'aiphases.q1', q: 'Which phase turns a business intent into requirements, stories and units?', opts: ['Construction', 'Operations', 'Inception', 'Maintenance'], a: 2, why: 'Inception does that. Construction proposes design, code and tests, and Operations handles infrastructure and deployment.' },
+        { id: 'aiphases.q2', q: 'The AWS post names a team ritual for validating the AI\'s questions in the first phase. What is it called?', opts: ['Mob Construction', 'Mob Elaboration', 'Bolt Review', 'Sprint Planning'], a: 1, why: 'Mob Elaboration is in Inception. Mob Construction comes later.' },
+        { id: 'aiphases.q3', q: 'The AWS post describes three phases and the open tooling lists five. What do you do in a conversation?', opts: ['Say which one you mean', 'Pretend there is no difference', 'Only use the post\'s names', 'Say the tooling is wrong'], a: 0, why: 'Both are real. Naming which you mean avoids a confusing argument.' },
+        { id: 'aiphases.q4', q: 'Which task most deserves a person to decide?', opts: ['Re-running the test suite', 'Deciding whether to roll back a live release', 'Drafting a first set of stories', 'Renaming a variable'], a: 1, why: 'It is a judgment about customers, risk and timing. The others are drafts or checks that can be undone.' }
+      ]
+    },
+    airollout: {
+      widget: 'planning', src: ['A2', 'A3'],
+      idea: 'A team takes up a new way of working in steps. Start small, agree the rules, share the setup, learn in a guided first week, review what happened, and only then widen.',
+      tryit: 'The steps below are in a bad order. Move them until each step has what it needs, then decide where a person must say yes before the next teams start.',
+      tryNote: 'A toy: the dependencies are set by hand from the tooling docs and ordinary change practice. Real rollouts have more than one sensible order.',
+      goal: 'Introduce AI-DLC to one team, then to others.',
+      riskNote: 'It reaches many people at once and is hard to take back.',
+      okNote: 'A person says yes before the rollout widens, and the early steps are left to flow.',
+      start: ['widen', 'week', 'pilot', 'retro', 'setup', 'rules'],
+      steps: [
+        { id: 'pilot', text: 'Pick one willing team and one real, low-risk piece of work', needs: [] },
+        { id: 'rules', text: 'Agree the team\'s rules: what the AI may touch, who approves what', needs: ['pilot'] },
+        { id: 'setup', text: 'Commit the shared setup to the repo and keep personal settings private', needs: ['rules'] },
+        { id: 'week', text: 'Run a guided first week with a facilitator', needs: ['setup'] },
+        { id: 'retro', text: 'Review the audit trail and update the rules in a retrospective', needs: ['week'] },
+        { id: 'widen', text: 'Roll it out to the next teams', needs: ['retro'], risky: true }
+      ],
+      read: [
+        { h: 'What the tooling offers', p: 'The docs mention a guided first week for new users, a Facilitator Guide with a readiness check and a recovery playbook, and a workshop mode for several teams building at once (A2, A3). I could only read pages that link to some of these, so I can say they exist, not what they say.' },
+        { h: 'Share the setup', p: 'The getting-started page says to commit the shared configuration files so the whole team gets the same setup, and to keep personal settings out of the repository (A3). It is the usual working-agreement idea: shared things in the open, personal things private.' },
+        { h: 'Rules that learn', p: 'The docs have a section on rules and a "learning loop" for adapting the workflow to a team (A3). I have not read how it works. The Track 3 memory lesson applies either way: rules go stale unless someone owns them.' },
+        { h: 'Start small, then widen', p: 'Starting with one willing team and a real, low-risk job, then reviewing before widening, is ordinary change practice and not something AWS prescribes. The last step is where a person should say yes, because it reaches many people at once. (Teaching judgment.)' },
+        { h: 'Where a coach fits', p: 'A coach can run the guided week, keep the team\'s rules alive in retrospectives, and watch for approval fatigue and for people losing track of their own work. (Teaching judgment.)' }
+      ],
+      under: { h: 'Under the hood: the setup is a folder of text files', p: 'The shared setup is ordinary files in the repository: configuration, workflow rules and the saved work records (A3). That is why it can be committed, reviewed and changed like code, and why a bad rule is as easy to spread as a good one.' },
+      agile: 'It is the oldest advice in change work in Agile clothes: pilot, inspect, adapt, then scale. Treat the rules file as a living working agreement, and put "update the AI rules" on the retrospective list.',
+      tools: 'Before you widen, check whether the shared setup is in version control, who can change it, and whether each person\'s own settings stay private. Ask your platform or security team what is approved for which kinds of work. (Policies differ: verify yours.)',
+      quiz: [
+        { id: 'airollout.q1', q: 'Why start a rollout with one willing team and a real, low-risk job?', opts: ['It is the only order the tooling allows', 'You learn what works and what breaks before many people are affected', 'It avoids the need for any rules', 'Managers prefer small teams'], a: 1, why: 'A small first step keeps mistakes cheap, and the review tells you what to change before you widen.' },
+        { id: 'airollout.q2', q: 'According to the tooling docs, what should a team do with the configuration files?', opts: ['Keep them on one person\'s laptop', 'Email them each week', 'Delete them after each job', 'Commit the shared ones to the repo and keep personal settings out'], a: 3, why: 'Shared files give everyone the same setup. Personal settings stay private.' },
+        { id: 'airollout.q3', q: 'Which step in the toy should a person approve before it starts?', opts: ['Pick a pilot team', 'Run a guided first week', 'Roll it out to the next teams', 'Agree the team\'s rules'], a: 2, why: 'It reaches many people at once and is hard to take back. The early steps can flow.' },
+        { id: 'airollout.q4', q: 'The team\'s AI rules file was written six months ago and nobody has touched it. The likely problem?', opts: ['The rules are stale, and the AI keeps following agreements the team has moved past', 'The model has forgotten them', 'The file is encrypted', 'The window is too small'], a: 0, why: 'Notes and rules are true on the day they are written. Give them an owner and a review.' }
+      ]
+    },
+    aievidence: {
+      widget: 'claims', src: ['A1', 'A3', 'A5'],
+      idea: 'AI-DLC comes with big promises. Learn to separate what a source states from what it only claims, and from what nobody has shown.',
+      tryit: 'Read each statement and decide whether it is said in the sources I read. Then check.',
+      tryNote: 'A toy built from my reading. I read the AWS post and the tooling docs through a page fetcher that returned summaries, and I did not reach the white paper. Check the originals before you repeat any of this.',
+      claims: [
+        { id: 'e1', text: 'Bolts are measured in hours or days rather than weeks.', said: true, why: 'The AWS post describes bolts this way (A1).' },
+        { id: 'e2', text: 'A published study shows AI-DLC teams ship faster than Scrum teams.', said: false, why: 'The post claims gains in speed and quality, but as far as I could read it gives no study or figures behind them (A1).' },
+        { id: 'e3', text: 'In the tooling, a reviewer agent checks each stage and a person approves or requests changes.', said: true, why: 'That is how the getting-started page describes the gates (A3).' },
+        { id: 'e4', text: 'The AWS post explains step by step how to run a Mob Elaboration session.', said: false, why: 'It names the ritual and says what it is for, but not its format, length or who attends (A1).' },
+        { id: 'e5', text: 'The post describes three phases: Inception, Construction and Operations.', said: true, why: 'Yes (A1). The tooling lists five phases, so say which you mean.' },
+        { id: 'e6', text: 'The post sets out the situations where AI-DLC is a poor fit.', said: false, why: 'It does not cover failure modes or limits, as far as I could read (A1).' },
+        { id: 'e7', text: 'The post gives step-by-step guidance for moving a team from Scrum to AI-DLC.', said: false, why: 'Migration from an existing Agile setup is not covered (A1).' },
+        { id: 'e8', text: 'A Scrum.org post argues spec-driven development is not waterfall unless it is used that way.', said: true, why: 'That is its title (A5). It is about spec-driven development in general, not about AI-DLC.' }
+      ],
+      read: [
+        { h: 'Claims versus evidence', p: 'The AWS post lists benefits: speed, innovation, quality, responsiveness and developer experience. As far as I could read, it offers no study, trial or figures behind them (A1). A claim from the author of a method is a hypothesis, not a result.' },
+        { h: 'What is firm', p: 'The vocabulary, the phases, the plan-ask-validate-build pattern, and what the open tooling does at each gate are all described in the sources I read (A1, A3). You can describe them with confidence.' },
+        { h: 'What is missing', p: 'The post does not cover how to run the rituals, how to migrate from an existing Agile setup, governance, cost, failure modes or when the method does not fit (A1). The page I read was reported as truncated, so check the full post and the white paper it links. Gaps like these are where an interviewer\'s hardest questions tend to land.' },
+        { h: 'A related debate', p: 'Writers on spec-driven development, a close cousin, ask whether heavy up-front specifications drift toward waterfall. A Scrum.org post argues that it does not, unless it is used that way (A5). That is a general debate, not a finding about AI-DLC.' },
+        { h: 'How you could find out', p: 'Pick measures you already trust and take a baseline first: lead time, rework, defects that escape, review time and how the team feels. Compare a pilot with its own past, and do not measure speed alone. (Teaching judgment.)' }
+      ],
+      under: { h: 'Under the hood: why a method\'s own claim is not a trial', p: 'An author describes what a method is meant to do. A trial compares teams doing the work two ways, with the same measures, over enough time. Without that comparison, a gain from AI-DLC cannot be told apart from a gain from a motivated team, a new tool or a small first project. (General reasoning.)' },
+      agile: 'Empiricism is the base of Scrum: transparency, inspection, adaptation. Apply it to the method itself. Treat AI-DLC as a hypothesis, write the result you expect, and inspect it in a retrospective.',
+      tools: 'Ask the vendor or your platform team what evidence exists, and from whom. Ask what a pilot measured and what it left out. (Verify before you repeat any number.)',
+      quiz: [
+        { id: 'aievidence.q1', q: 'The AWS post lists benefits such as speed and quality. What backs them up, as far as this lesson could read?', opts: ['A large controlled trial', 'A comparison with every other method', 'A refund policy', 'No study or figures that I could find'], a: 3, why: 'The claims are the author\'s. Treat them as a hypothesis until you have measured your own.' },
+        { id: 'aievidence.q2', q: 'Which statement can you make with confidence from the sources read?', opts: ['AI-DLC makes teams twice as fast', 'The method repeats plan, ask, validate and build for each activity', 'Every team should adopt it now', 'It removes the need for review'], a: 1, why: 'The pattern is described in the post. The others are claims nobody has shown.' },
+        { id: 'aievidence.q3', q: 'Why can a good result at a pilot team not be put down to AI-DLC alone?', opts: ['A pilot team always gets worse', 'Pilots cannot be measured', 'It could come from a motivated team, a new tool or a small first project', 'AI-DLC forbids measuring'], a: 2, why: 'Without a comparison you cannot separate the method from everything else that changed.' },
+        { id: 'aievidence.q4', q: 'What is a sensible first step to find out whether it works for your team?', opts: ['Trust the vendor\'s numbers', 'Take a baseline of measures you trust, then compare a pilot with its own past', 'Measure only speed', 'Skip measurement'], a: 1, why: 'Know where you start, measure more than speed, and compare like with like.' }
+      ]
+    },
+    airehearse: {
+      widget: 'rehearse', src: ['A1', 'A3', 'S26'],
+      idea: 'You learn a topic when you can say it in your own words. Write your own answer first, then compare it with a short sample built from the lessons, and note what you left out.',
+      tryit: 'Pick a question and write your answer in your own words. Then open the sample answer and compare.',
+      tryNote: 'Nothing here is sent or saved. The samples are short and built from the lessons, and a sample cannot supply your own experience. Add a real example of something you have built or run, described plainly without names.',
+      prompts: [
+        { id: 'r1', q: 'In two sentences: what is AI-DLC, and how is it different from using an AI coding assistant?', sample: 'AI-DLC is a method AWS published in 2025 that makes AI the engine of each activity in the life cycle, not an assistant on single tasks. The AI drafts plans and asks questions, and a person validates before anything is built, so decisions stay with people and the context lives in the repository (A1).' },
+        { id: 'r2', q: 'How would you start a team on it?', sample: 'One willing team and one real, low-risk job. First agree the rules: what the AI may touch and who approves what. Share the setup in the repo and keep personal settings private. Run a guided first week with a facilitator, review what happened in a retrospective, and only then widen (A3, plus ordinary change practice).' },
+        { id: 'r3', q: 'How would you know it is working?', sample: 'The sources I have read give no evidence, so I would not trust a number until we measured our own. I would take a baseline first, covering lead time, rework, escaped defects, review time and how the team feels. Then I would compare the pilot with its own past and read the audit trail to see where people overruled the AI.' },
+        { id: 'r4', q: 'What worries you about it?', sample: 'Three things. Approval fatigue, where people click through gates without reading. Stale rules the AI keeps following. And too much access: an AI that reads outside content and can send things out can be steered (the lethal trifecta, S26). I would keep gates where mistakes are costly and give it the least access that does the job.' },
+        { id: 'r5', q: 'Where does an Agile coach or Scrum Master fit?', sample: 'Facilitating the team sessions the method names, keeping the team\'s rules alive in retrospectives, coaching people on where to put gates, and keeping the measuring honest. That is my own view of the role, not something the sources say.' }
+      ],
+      read: [
+        { h: 'Say it before you read it', p: 'Writing your own answer first shows you what you actually know. Reading the sample first makes everything look familiar, and familiar feels like known.' },
+        { h: 'Short beats thorough', p: 'Two or three sentences you can say without notes are worth more than a page you cannot. Add detail only when someone asks for it.' },
+        { h: 'Be plain about the edges', p: 'Say which sources you have read and which you have not. These lessons used the AWS post and the tooling docs, not the white paper. An honest edge is more trusted than a bluff.' },
+        { h: 'Bring one story', p: 'A real example makes an answer stick. Describe something you built or ran in plain words, what the AI did and where a person decided. Leave out names, users and numbers if the story is going into anything shared.' }
+      ],
+      under: { h: 'Under the hood: why writing first works', p: 'Trying to recall something before you look at the answer strengthens the memory more than re-reading does, which is why the Academy asks you to answer before it shows you. (A general finding in learning research; no source is cited here.)' },
+      agile: 'It is a retrospective with yourself: say what you know, see the gap, adjust. And a demo: if you cannot explain it in two minutes, you have not finished learning it.',
+      tools: 'Record yourself on a phone answering one question out loud, then listen back for filler and gaps. Keep your own examples ready, and keep anything from an employer or client out of a public note.',
+      quiz: [
+        { id: 'airehearse.q1', q: 'Which answer to "how will we know it works?" is the most honest, given the sources?', opts: ['It will double our speed', 'Everyone says it works', 'The sources show no evidence yet, so we take a baseline and measure our own pilot', 'It does not need measuring'], a: 2, why: 'It says what is known, what is not, and how you would find out.' },
+        { id: 'airehearse.q2', q: 'You read the AWS post and the tooling docs but not the white paper. What do you say if asked about it?', opts: ['Say plainly which sources you read and which you have not', 'Say you read it all', 'Make up a summary', 'Change the subject'], a: 0, why: 'A stated edge is trusted. A bluff is found out.' },
+        { id: 'airehearse.q3', q: 'Why write your own answer before reading the sample?', opts: ['It is faster', 'Samples are secret', 'There is no reason', 'Trying to recall first shows you the gaps and sticks better than re-reading'], a: 3, why: 'Retrieval shows what you actually know and strengthens it.' },
+        { id: 'airehearse.q4', q: 'Which belongs in a shared note about an example from your own work?', opts: ['The names and numbers of real customers', 'A plain description of the pattern, with no names, users or data', 'Anything from your employer', 'Passwords'], a: 1, why: 'Describe the pattern. Keep names, users and data out of anything shared.' }
       ]
     }
   },
