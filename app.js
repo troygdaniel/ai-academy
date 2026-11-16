@@ -9,7 +9,7 @@
   function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
 
   // ---------- state: kept in this browser only (localStorage), and Save / Load to a file ----------
-  function fresh() { return { v: 1, xp: 0, days: {}, cards: {}, done: {}, goal: 10, read: 22, theme: '', names: [], pos: { space: 'learn', track: 'models', concept: 'tokens', zoom: 0, fam: '', role: '' } }; }
+  function fresh() { return { v: 1, xp: 0, days: {}, cards: {}, done: {}, goal: 10, read: 22, theme: '', names: [], played: {}, readm: {}, pos: { space: 'learn', track: 'models', concept: 'tokens', zoom: 0, fam: '', role: '' } }; }
   // Accept a saved object only if it has the right shape; fill anything missing (older files have no names, no roles position).
   function adopt(j) {
     if (!(j && j.v === 1 && j.cards && typeof j.cards === 'object' && j.days && typeof j.days === 'object')) return null;
@@ -19,6 +19,7 @@
     s.theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : '';
     s.names = Array.isArray(s.names) ? s.names.filter(function (n) { return typeof n === 'string'; }).slice(0, 50) : [];
     if (!s.done || typeof s.done !== 'object') s.done = {};
+    ['played', 'readm'].forEach(function (f) { if (!s[f] || typeof s[f] !== 'object') s[f] = {}; }); // which toys you have poked and which Read more pages you opened
     for (k in s.cards) { c = s.cards[k]; if (!c || typeof c.ef !== 'number' || typeof c.due !== 'number' || typeof c.int !== 'number' || typeof c.rep !== 'number') delete s.cards[k]; }
     for (k in s.days) { c = s.days[k]; if (!c || typeof c.min !== 'number' || typeof c.xp !== 'number') delete s.days[k]; }
     return s;
@@ -116,6 +117,7 @@
       if (z >= 2 && !S.pos.concept) z = 1;
     }
     S.pos.zoom = Math.max(0, Math.min(3, z));
+    if (S.pos.zoom === 3 && S.pos.space === 'learn' && S.pos.concept) S.readm[S.pos.concept] = true;
     save(); renderAll();
     if (z0 !== S.pos.zoom || sp0 !== S.pos.space || !went) arrive(z0);
     went = true;
@@ -225,10 +227,11 @@
     if (!L) { el.dataset.key = ''; el.innerHTML = '<div class="wrap"><h1>Nothing here yet</h1><p class="muted">Pick a lesson from the track.</p></div>'; return; }
     if (el.dataset.key !== 'learn.' + c.id) { // build once per lesson, so the picture keeps its state while the quiz and chips redraw
       el.dataset.key = 'learn.' + c.id;
-      el.innerHTML = '<div class="wrap"><div class="head big"><div><div class="kicker">Track ' + (trackIndex(t) + 1) + ' · ' + esc(t.title) + '</div><h1>' + esc(c.title) + '</h1></div><div class="lrail sp" id="lrail" role="group" aria-label="Lessons in this track"></div></div>' +
-        '<p class="idea">' + esc(L.idea) + '</p>' +
-        '<section class="card"><h3>Try it</h3><p class="muted" style="margin:0 0 10px">' + esc(L.tryit) + '</p><div class="widget" id="widget"></div><p class="note">' + esc(L.tryNote) + '</p></section>' +
-        '<div class="duo"><section class="card quiz" id="quiz" aria-label="Quiz"></section><div class="stackv"><div class="card"><h3>The Agile lens</h3><p>' + esc(L.agile) + '</p></div><div class="card"><h3>In practice</h3><p>' + esc(L.tools) + '</p></div></div></div>' +
+      el.innerHTML = '<div class="wrap lesson" style="--c:' + hue(trackIndex(t)) + '"><div class="head big"><div><div class="kicker">Track ' + (trackIndex(t) + 1) + ' · ' + esc(t.title) + '</div><h1>' + esc(c.title) + '</h1></div><div class="lrail sp" id="lrail" role="group" aria-label="Lessons in this track"></div></div>' +
+        '<p class="idea">' + esc(L.idea) + '</p><ol class="steps" id="steps" aria-label="This lesson, in three steps"></ol>' +
+        '<div class="playmat"><section class="card toy" id="toy"><div class="toyhead"><h3>Try it</h3><span class="tag turn" id="toy-state"></span></div><p class="muted" style="margin:0 0 10px">' + esc(L.tryit) + '</p><div class="widget" id="widget"></div><p class="note">' + esc(L.tryNote) + '</p></section>' +
+        '<div class="qcol"><section class="card quiz" id="quiz" aria-label="Quiz"></section></div>' +
+        '<div class="lenses"><div class="card"><h3>The Agile lens</h3><p>' + esc(L.agile) + '</p></div><div class="card"><h3>In practice</h3><p>' + esc(L.tools) + '</p></div></div></div>' +
         '<p><button type="button" class="btn" data-act="detail" aria-keyshortcuts="+">Read more, in big type' + kbd('+') + '</button></p></div>';
       var host = $('#widget', el);
       if (WIDGETS[L.widget]) WIDGETS[L.widget](host, L, sandboxApi); else host.innerHTML = '<p class="muted">No picture for this one yet.</p>';
@@ -236,7 +239,41 @@
     $('#lrail', el).innerHTML = readyIn(t).map(function (x, i) { // the lessons of this track, as a rail you can walk with the arrows
       return '<button type="button" data-concept="' + x.id + '" class="' + (S.done[x.id] ? 'ok' : '') + '"' + (x.id === c.id ? ' aria-current="true"' : '') + ' title="' + esc(x.title) + '" aria-label="Lesson ' + (i + 1) + ': ' + esc(x.title) + (S.done[x.id] ? ', done' : '') + '">' + (i + 1) + '</button>';
     }).join('');
+    renderSteps(c.id);
     startQuiz(c.id, '#quiz'); renderQuiz();
+  }
+  // A lesson is three small things to do: poke the toy, answer the questions, read more. Each one ticks off.
+  function renderSteps(cid) {
+    var box = $('#steps'), st = $('#toy-state'); if (!box) return;
+    var s = [['Play', !!S.played[cid]], ['Answer', !!S.done[cid]], ['Read', !!S.readm[cid]]], n = s.filter(function (x) { return x[1]; }).length;
+    box.innerHTML = s.map(function (x, i) { return '<li class="' + (x[1] ? 'ok' : '') + '"><i aria-hidden="true">' + (x[1] ? '✓' : i + 1) + '</i>' + x[0] + '<span class="muted">' + (x[1] ? ', done' : '') + '</span></li>'; }).join('') + (n === 3 ? '<li class="all">Lesson complete</li>' : '');
+    if (st) { st.textContent = S.played[cid] ? '✓ played' : 'your turn'; st.className = 'tag ' + (S.played[cid] ? 'go' : 'turn'); }
+  }
+  function markPlayed() { // the first time you touch a toy
+    var cid = S.pos.concept; if (S.pos.space !== 'learn' || S.pos.zoom !== 2 || !cid || S.played[cid]) return;
+    S.played[cid] = true; save(); renderSteps(cid); burst($('#toy-state'), 'var(--ok)', 8);
+  }
+  ['input', 'change', 'click'].forEach(function (ev) { $('#L2').addEventListener(ev, function (e) { if (e.target.closest && e.target.closest('#widget') && (ev !== 'click' || e.target.closest('button, input, label'))) markPlayed(); }); });
+
+  // ---------- small celebrations: a burst of dots, a number that floats up. Skipped when reduced motion is on. ----------
+  var calm = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  function burst(el, color, n) {
+    if (!el || calm.matches) return;
+    var r = el.getBoundingClientRect(), box = document.createElement('div'), i, d, a, dist;
+    box.className = 'burst'; box.setAttribute('aria-hidden', 'true'); box.style.left = (r.left + Math.min(r.width / 2, 24)) + 'px'; box.style.top = (r.top + r.height / 2) + 'px';
+    for (i = 0; i < n; i++) {
+      d = document.createElement('i'); a = (i / n) * Math.PI * 2 + Math.random() * 0.6; dist = 22 + Math.random() * 34;
+      d.style.setProperty('--dx', (Math.cos(a) * dist).toFixed(1) + 'px'); d.style.setProperty('--dy', (Math.sin(a) * dist).toFixed(1) + 'px'); d.style.background = i % 3 === 2 ? 'var(--info)' : color;
+      box.appendChild(d);
+    }
+    document.body.appendChild(box); setTimeout(function () { box.remove(); }, 900);
+  }
+  function flyXp(el, n) {
+    var chip = $('#c-level'); chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump'); // the level chip takes the points
+    if (!el || calm.matches) return;
+    var r = el.getBoundingClientRect(), f = document.createElement('b');
+    f.className = 'xpfly'; f.setAttribute('aria-hidden', 'true'); f.textContent = '+' + n + ' XP'; var side = el.classList.contains('score'); f.style.left = (side ? r.right + 10 : r.right - 90) + 'px'; f.style.top = (side ? r.top + r.height / 2 : r.top + 4) + 'px'; // beside the score ring, or in the corner of the answer
+    document.body.appendChild(f); setTimeout(function () { f.remove(); }, 1100);
   }
   function renderDetail() {
     var t = trackOf(S.pos.track), c = t && conceptOf(t, S.pos.concept), L = c && A.lessons[c.id];
@@ -353,9 +390,10 @@
     var box = Q && $(Q.box); if (!box) return;
     var qs = QSETS[Q.sid], n = qs.length, dots = '';
     for (var i = 0; i < n; i++) dots += '<i class="' + (Q.res[i] === true ? 'ok' : Q.res[i] === false ? 'bad' : i === Q.i && !Q.done ? 'on' : '') + '"></i>';
+    box.dataset.left = Q.done ? 0 : n - Q.i - 1; // how many cards are still in the deck behind this one
     if (Q.done) {
-      var nx = S.pos.space === 'learn' ? nextLesson(Q.sid) : null;
-      box.innerHTML = '<div class="done"><div class="dots">' + dots + '</div><div class="score" style="--c:var(--ok)" aria-hidden="true">' + ring(Q.right / n, 96, 'hue') + '<b>' + Q.right + '/' + n + '</b></div><h3 tabindex="-1">' + Q.right + ' of ' + n + ' right</h3><p class="muted" style="margin:0">' + (Q.gain ? '+' + Q.gain + ' XP. ' : '') + (Q.added ? Q.added + ' cards joined your review queue.' : 'Your review cards keep their schedule.') + '</p>' +
+      var nx = S.pos.space === 'learn' ? nextLesson(Q.sid) : null, word = Q.right === n ? 'Clean sweep' : Q.right * 2 >= n ? 'Good run' : 'First pass';
+      box.innerHTML = '<div class="done"><div class="dots">' + dots + '</div><div class="kicker">' + word + '</div><div class="score" style="--c:var(--ok)" aria-hidden="true">' + ring(Q.right / n, 96, 'hue') + '<b>' + Q.right + '/' + n + '</b></div><h3 tabindex="-1">' + Q.right + ' of ' + n + ' right</h3><p class="muted" style="margin:0">' + (Q.gain ? '+' + Q.gain + ' XP. ' : '') + (Q.added ? Q.added + ' cards joined your review queue.' : 'Your review cards keep their schedule.') + '</p>' +
         '<div class="row" style="justify-content:center">' + (nx ? '<button type="button" class="btn primary" data-act="nextlesson">Next lesson: ' + esc(nx.c.title) + '</button>' : '') +
         (S.pos.space === 'learn' ? '<button type="button" class="btn' + (nx ? '' : ' primary') + '" data-act="detail">Read more</button><button type="button" class="btn" data-z="1">Back to the track</button>' : '<button type="button" class="btn" data-z="0">Back to the tree</button>') +
         '<button type="button" class="btn" data-act="replay">Replay the quiz</button></div></div>';
@@ -363,22 +401,26 @@
       return;
     }
     var q = qs[Q.i];
-    box.innerHTML = '<div class="dots">' + dots + '</div><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, Q.picked, 'data-opt', focus) +
-      (Q.picked === null ? '' : '<p class="why" role="status"><b>' + (Q.picked === q.a ? 'Right. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</p><p style="margin:12px 0 0"><button type="button" class="btn primary" data-act="next">' + (Q.i + 1 < n ? 'Next question' : 'Finish') + kbd('Enter') + '</button></p>');
+    box.innerHTML = '<div class="qbody' + (Q.deal ? ' deal' : '') + '"><div class="qhead"><div class="dots">' + dots + '</div>' + (Q.combo >= 2 ? '<span class="combo">' + Q.combo + ' in a row</span>' : '') + '</div><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, Q.picked, 'data-opt', focus) +
+      (Q.picked === null ? '' : '<p class="why" role="status"><b>' + (Q.picked === q.a ? 'Right. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</p><p style="margin:12px 0 0"><button type="button" class="btn primary" data-act="next">' + (Q.i + 1 < n ? 'Next question' : 'Finish') + kbd('Enter') + '</button></p>') + '</div>';
+    Q.deal = false;
     if (focus) { var f = Q.picked === null ? $('.q', box) : $('[data-act="next"]', box); if (f) f.focus({ preventScroll: Q.picked !== null }); }
   }
   function pick(i) {
     if (!Q || Q.done || Q.picked !== null) return;
     var q = QSETS[Q.sid][Q.i]; if (i >= q.opts.length) return;
-    var ok = i === q.a; Q.picked = i; Q.res[Q.i] = ok; if (ok) Q.right++;
-    if (!S.cards[q.id]) { grade(q.id, ok ? 4 : 1); var g = ok ? 5 : 1; addXp(g); Q.gain = (Q.gain || 0) + g; Q.added = (Q.added || 0) + 1; } // only the first sight of a question makes a card and earns XP
+    var ok = i === q.a, g = 0; Q.picked = i; Q.res[Q.i] = ok; if (ok) Q.right++; Q.combo = ok ? (Q.combo || 0) + 1 : 0;
+    if (!S.cards[q.id]) { grade(q.id, ok ? 4 : 1); g = ok ? 5 : 1; addXp(g); Q.gain = (Q.gain || 0) + g; Q.added = (Q.added || 0) + 1; } // only the first sight of a question makes a card and earns XP
     renderQuiz(true); renderChips();
+    var hit = $(Q.box + ' .opt.right'); if (ok) burst(hit, 'var(--ok)', 10); if (g) flyXp(ok ? hit : $(Q.box + ' .opt.wrong'), g);
   }
   function nextQ() {
     if (!Q || Q.picked === null) return;
     Q.picked = null; Q.i++;
-    if (Q.i >= QSETS[Q.sid].length) { Q.done = true; if (!S.done[Q.sid]) { S.done[Q.sid] = true; addXp(20); Q.gain = (Q.gain || 0) + 20; } save(); renderAll(); }
+    var fin = Q.i >= QSETS[Q.sid].length, first = false;
+    if (fin) { Q.done = true; if (!S.done[Q.sid]) { first = true; S.done[Q.sid] = true; addXp(20); Q.gain = (Q.gain || 0) + 20; } save(); renderAll(); } else Q.deal = true; // the next card is dealt in
     renderQuiz(true);
+    if (fin) { if (first) flyXp($(Q.box + ' .score'), 20); if (Q.right === QSETS[Q.sid].length) burst($(Q.box + ' .score'), 'var(--ok)', 18); }
   }
 
   // ---------- chips, menu ----------
@@ -450,7 +492,7 @@
     box.innerHTML = '<div class="sheet"><div class="sheethead"><h2 class="kicker" id="rv-title">Review · card ' + (R.i + 1) + ' of ' + R.ids.length + '</h2>' + segs(shown) + close + '</div><div class="card"><p class="q" tabindex="-1">' + esc(q.q) + '</p>' + optsHtml(q, R.picked, 'data-ropt', focus) + tail + '</div></div>';
     if (focus) { var f = R.picked === null ? $('.q', box) : $('[data-g="4"]', box) || $('[data-g="1"]', box); if (f) f.focus(); }
   }
-  function rpick(i) { if (R && R.picked === null && R.i < R.ids.length && i < QINDEX[R.ids[R.i]].opts.length) { R.picked = i; renderReview(true); } }
+  function rpick(i) { if (R && R.picked === null && R.i < R.ids.length && i < QINDEX[R.ids[R.i]].opts.length) { R.picked = i; renderReview(true); if (i === QINDEX[R.ids[R.i]].a) burst($('#review .opt.right'), 'var(--ok)', 10); } }
   function rgrade(g) { if (!R || R.picked === null) return; var id = R.ids[R.i]; grade(id, g); addXp(2); R.gain += 2; R.i++; R.picked = null; renderReview(true); renderChips(); }
 
   // The sandbox keeps the names you list (to warn about them) in this browser. They are left out of the Save file.

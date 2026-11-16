@@ -28,6 +28,7 @@ const seed = () => {
     await page.keyboard.press('m'); await page.keyboard.press('ArrowRight'); await shot('1-map');                    // the Map, with the keyboard on a tile
     await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Enter'); await shot('2-track');                 // the Track, on the lesson you are at
     await page.keyboard.press('Enter'); await page.locator('#widget [data-v="2"]').click(); await page.evaluate(() => { document.querySelector('#L2').scrollTop = 0; }); await shot('3-concept');
+    { const qa = await page.evaluate(() => ACADEMY.lessons.roles.quiz[0].a); await page.keyboard.press(String(qa + 1)); await shot('3b-answering'); }
     await page.keyboard.press('+'); await shot('4-detail');
     await page.keyboard.press('r'); await page.keyboard.press('ArrowDown'); await shot('5-review');
     await page.keyboard.press('Escape'); await page.keyboard.press('s');
@@ -38,5 +39,5 @@ const seed = () => {
     await ctx.close();
   }
   await browser.close();
-  console.log('wrote 18 screenshots to ' + OUT);
+  console.log('wrote 20 screenshots to ' + OUT);
 })().catch(e => { console.error(e); process.exit(1); });

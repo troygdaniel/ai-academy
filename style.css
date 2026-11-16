@@ -457,9 +457,59 @@ fieldset.seg label { display: flex; gap: 8px; align-items: flex-start; min-heigh
 .donut { --p: 0; display: inline-block; width: 54px; height: 54px; border-radius: 50%; vertical-align: middle; margin-right: 12px; background: conic-gradient(var(--ok) calc(var(--p) * 1%), var(--ring-bg) 0); -webkit-mask: radial-gradient(circle, transparent 17px, #000 18px); mask: radial-gradient(circle, transparent 17px, #000 18px); }
 .widget .leg { margin-bottom: 8px; }
 
+/* ---------- the lesson page as a play mat: the toy on one side, the questions dealt beside it ---------- */
+.steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.steps li { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px 4px 4px; border-radius: 999px; font-size: var(--fs-md); font-weight: 600; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.steps li i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-xs); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--neutral); }
+.steps li span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.steps li.ok { color: var(--text); } .steps li.ok i { background: var(--ok); color: var(--bg); box-shadow: none; animation: stamp .4s var(--ease); }
+.steps li.all { padding-left: 12px; color: var(--ok); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
+@keyframes stamp { from { transform: scale(.4); } 60% { transform: scale(1.2); } }
+.playmat { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-areas: "toy toy" "quiz lens"; align-items: start; }
+.playmat > * { min-width: 0; }
+.toy { grid-area: toy; background: radial-gradient(120% 90% at 0 0, color-mix(in srgb, var(--c) 9%, transparent), transparent 55%), var(--surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, var(--line)), inset 0 3px 0 color-mix(in srgb, var(--c) 70%, transparent), var(--panel-sh); }
+.toyhead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; } .toyhead h3 { margin: 0; }
+.tag.turn { color: var(--text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, var(--line)); background: color-mix(in srgb, var(--c) 12%, var(--surface)); animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, var(--line)), 0 0 0 5px color-mix(in srgb, var(--c) 14%, transparent); } }
+.qcol { grid-area: quiz; } .lenses { grid-area: lens; display: grid; gap: 18px; }
+.lenses .card h3 { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--muted); margin-bottom: 8px; } .lenses .card p { margin: 0; }
+@media (min-width: 1280px) {
+  .wrap.lesson { max-width: 1320px; }
+  .playmat { grid-template-columns: minmax(0, 1fr) 440px; grid-template-areas: "toy quiz" "lens quiz"; }
+  .qcol { position: sticky; top: 0; } .lenses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the questions are a deck: the cards still to come sit behind, and the next one is dealt in */
+.quiz { position: relative; }
+.quiz::before, .quiz::after { content: ""; position: absolute; left: 14px; right: 14px; height: 14px; bottom: -8px; border-radius: 0 0 20px 20px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); z-index: -1; transition: opacity .3s, transform .3s; }
+.quiz::after { left: 28px; right: 28px; bottom: -15px; opacity: .6; }
+.quiz[data-left="1"]::after, .quiz[data-left="0"]::before, .quiz[data-left="0"]::after { opacity: 0; transform: translateY(-8px); }
+.qcol, #L1 .quiz { isolation: isolate; }
+.qhead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; } .qhead .dots { margin: 0; flex: 1; }
+.combo { font-size: var(--fs-xs); font-weight: 700; letter-spacing: var(--tr-tight); color: var(--bg); background: var(--run-solid); color: var(--on-run); border-radius: 999px; padding: 1px 9px; animation: stamp .4s var(--ease); white-space: nowrap; }
+@keyframes deal { from { opacity: 0; transform: translateX(26px) rotate(1.2deg); } }
+.qbody.deal { animation: deal .38s var(--ease) both; }
+.opt { transition: border-color .15s ease, background .15s ease, transform .12s ease; }
+.opt:active:not([disabled]) { transform: scale(.985); }
+.opt:hover:not([disabled]) kbd, .opt:focus-visible kbd { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.opt.right kbd { background: var(--ok); color: var(--bg); border-color: var(--ok); } .opt.wrong kbd { background: var(--err); color: var(--bg); border-color: var(--err); }
+.done .kicker { color: var(--ok); }
+/* a burst of dots and a number that floats up */
+.burst { position: fixed; z-index: 70; width: 0; height: 0; pointer-events: none; }
+.burst i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; animation: burst .7s var(--ease) both; }
+@keyframes burst { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+.xpfly { position: fixed; z-index: 70; pointer-events: none; font-size: var(--fs-md); font-weight: 700; color: var(--ok); animation: xpfly 1s var(--ease) both; white-space: nowrap; }
+@keyframes xpfly { from { opacity: 0; transform: translateY(6px); } 20% { opacity: 1; } to { opacity: 0; transform: translateY(-42px); } }
+@keyframes bump { 40% { transform: scale(1.12); box-shadow: inset 0 0 0 1px var(--info), 0 0 0 5px color-mix(in srgb, var(--info) 18%, transparent); } }
+.chip.bump { animation: bump .5s var(--ease); }
+/* a toy's verdict pops when it turns good and shakes when it turns bad */
+@keyframes vpop { from { transform: scale(.985); background: color-mix(in srgb, var(--ok) 18%, var(--chip)); } }
+@keyframes vshake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } from { background: color-mix(in srgb, var(--err) 16%, var(--chip)); } }
+.widget .verdict.ok { animation: vpop .5s var(--ease); } .widget .verdict.bad { animation: vshake .32s ease-in-out; }
+
 @media (prefers-reduced-motion: reduce) {
   /* transitions are off altogether, not just very short: a .01ms transition on an inherited property (visibility) still leaves a layer hidden for a frame, and the keyboard cannot land in it */
   *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   .layer, .layer.is-out, .tcard:hover, .tcard:focus-visible, .rnode:hover, .rnode:focus-visible, .btn.primary:hover { transform: none !important; }
   .tcard.next .tring::after { display: none; }
+  .tag.turn { animation: none !important; }
 }
