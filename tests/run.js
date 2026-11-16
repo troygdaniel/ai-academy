@@ -1283,6 +1283,61 @@ ok((await page.locator('#rt-verdict').getAttribute('class')).includes('bad') && 
   eq(page.net, [], 'and nothing over the network');
   await page.close();
 
+  // ------------------------------------------------------------------ the lesson page: play mat, steps, the question deck
+  section('The lesson page: toy and questions side by side, three steps, a deck of questions');
+  page = await open(browser, { viewport: { width: 1440, height: 900 } });
+  await goLesson(page, 'models', 'context');
+  const boxes = () => D(page, () => { const t = document.querySelector('#toy').getBoundingClientRect(), q = document.querySelector('#quiz').getBoundingClientRect(); return { side: q.left >= t.right && Math.abs(q.top - t.top) < 6, below: q.top >= t.bottom }; });
+  ok((await boxes()).side, 'on a wide screen the questions sit beside the toy, so you can poke it while you answer');
+  const steps = () => D(page, () => [...document.querySelectorAll('#steps li')].map(l => (l.classList.contains('ok') ? '+' : l.classList.contains('all') ? '*' : '-') + l.textContent.replace(/^[✓\d]/, '').replace(', done', '')));
+  eq([await steps(), await text(page, '#toy-state')], [['-Play', '-Answer', '-Read'], 'your turn'], 'a new lesson shows three steps to do, and the toy says it is your turn');
+  await page.focus('#cx-win'); await page.keyboard.press('ArrowLeft');
+  eq([(await steps())[0], await text(page, '#toy-state'), await D(page, () => ACADEMY_DEBUG.state().played.context)], ['+Play', '✓ played', true], 'touching the toy ticks Play, and it is remembered');
+  ok(await page.locator('.burst').count() === 1, 'with a small burst');
+  await setRange(page, '#cx-turns', 9);
+  await D(page, () => { document.querySelector('#L2').scrollTop = 400; }); await page.waitForTimeout(50);
+  ok(await D(page, () => { const q = document.querySelector('#quiz').getBoundingClientRect(), s = document.querySelector('#stage').getBoundingClientRect(); return q.top >= s.top - 2 && q.top < s.top + 40; }), 'and they stay in view while the toy scrolls');
+  await D(page, () => { document.querySelector('#L2').scrollTop = 0; });
+  const ca = await D(page, () => ACADEMY.lessons.context.quiz.map(q => q.a));
+  eq(await D(page, () => document.querySelector('#quiz').dataset.left), '3', 'the question card shows three more cards behind it');
+  await page.keyboard.press(String(ca[0] + 1));
+  ok(await page.locator('.xpfly').count() === 1 && /\+5 XP/.test(await text(page, '.xpfly')) && await D(page, () => document.querySelector('#c-level').classList.contains('bump')), 'a right answer floats +5 XP and the level chip takes it');
+  ok(await page.locator('#quiz .combo').count() === 0, 'one right answer is not a streak yet');
+  await page.keyboard.press('Enter');
+  ok(await D(page, () => document.querySelector('#quiz .qbody').classList.contains('deal') && document.querySelector('#quiz').dataset.left === '2'), 'the next question is dealt in and the deck gets shorter');
+  await page.keyboard.press(String(ca[1] + 1));
+  ok(/2 in a row/.test(await text(page, '#quiz .combo')), 'two right answers running shows a streak');
+  await page.keyboard.press('Enter'); await page.keyboard.press(String(((ca[2] + 1) % 4) + 1));
+  ok(await page.locator('#quiz .combo').count() === 0, 'a miss ends the streak');
+  await page.keyboard.press('Enter'); await page.keyboard.press(String(ca[3] + 1)); await page.keyboard.press('Enter');
+  ok(/good run/i.test(await text(page, '#quiz .done .kicker')) && /3 of 4 right/.test(await text(page, '#quiz')) && await D(page, () => document.querySelector('#quiz').dataset.left === '0'), 'the finish names the run, and the deck is empty');
+  eq((await steps()).slice(0, 2), ['+Play', '+Answer'], 'finishing the questions ticks Answer');
+  await page.keyboard.press('+'); await page.keyboard.press('-');
+  eq(await steps(), ['+Play', '+Answer', '+Read', '*Lesson complete'], 'opening Read more ticks Read, and the lesson is complete');
+  await page.waitForTimeout(1300); eq(await page.locator('.burst, .xpfly').count(), 0, 'the bursts and floating numbers clean up after themselves');
+  await goLesson(page, 'models', 'tokens'); const tk = await D(page, () => ACADEMY.lessons.tokens.quiz.map(q => q.a));
+  for (const a of tk) { await page.keyboard.press(String(a + 1)); await page.keyboard.press('Enter'); }
+  ok(/clean sweep/i.test(await text(page, '#quiz .done .kicker')), 'all four right is a clean sweep');
+  await page.waitForTimeout(1300); await page.locator('#quiz [data-act="replay"]').click(); await page.keyboard.press(String(tk[0] + 1));
+  await page.waitForTimeout(50);
+  ok(await page.locator('.burst').count() >= 1 && await page.locator('.xpfly').count() === 0, 'on a replay a right answer still bursts, but no XP floats, because none is earned');
+  await goLesson(page, 'prompting', 'roles'); await page.click('#widget [data-v="2"]');
+  eq([await text(page, '#toy-state'), (await steps())[0]], ['✓ played', '+Play'], 'pressing a button in a toy ticks Play too, even when the toy redraws that button');
+  await page.reload();
+  eq(await D(page, () => [ACADEMY_DEBUG.state().played.context, ACADEMY_DEBUG.state().readm.context]), [true, true], 'the steps survive a reload');
+  eq(await D(page, () => { const s = ACADEMY_DEBUG.adopt({ v: 1, cards: {}, days: {} }); return [typeof s.played, typeof s.readm]; }), ['object', 'object'], 'an older save file without the steps still loads');
+  eq(page.errors, [], 'no script errors on the lesson page run');
+  await page.close();
+  page = await open(browser);
+  await goLesson(page, 'models', 'context');
+  ok((await boxes()).below, 'on a narrower window the questions go under the toy');
+  await page.close();
+  page = await open(browser, { reducedMotion: 'reduce', viewport: { width: 1440, height: 900 } });
+  await goLesson(page, 'models', 'context'); await page.focus('#cx-win'); await page.keyboard.press('ArrowLeft');
+  const cq = await D(page, () => ACADEMY.lessons.context.quiz[0].a); await page.keyboard.press(String(cq + 1));
+  eq([await page.locator('.burst, .xpfly').count(), await text(page, '#toy-state'), await page.locator('#quiz .opt.right').count()], [0, '✓ played', 1], 'with reduced motion on there are no bursts or floating numbers, and everything still works');
+  await page.close();
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   if (fail) { console.log('\nFailed:\n  ' + failures.join('\n  ')); process.exit(1); }
