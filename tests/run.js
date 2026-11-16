@@ -285,6 +285,400 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   ok((await page.inputValue('#rh-in')).startsWith('AI-DLC is a method'), 'rehearse: your answer is kept while you move between questions');
   ok(await D(page, () => !/AI-DLC is a method/.test(JSON.stringify(ACADEMY_DEBUG.state()))), 'rehearse: what you write is not saved in your progress');
 
+  // ---------- aidlc2 ----------
+section('Track 9, second reading: stages and plans, rules and the audit trail, the facilitator and workshop mode');
+await goLesson(page, 'agile', 'aistages');
+eq(await D(page, () => { const L = ACADEMY.lessons.aistages; return [L.jobs.map(j => Object.keys(j.fit).length), L.jobs.map(j => Object.values(j.fit).filter(f => f[0] === 'best').length), L.plans.map(p => p.stages)]; }), [[6, 6, 6, 6, 6, 6], [1, 1, 1, 1, 1, 1], [5, 6, 7, 20, 30, 30]], 'stages: six jobs, each judged for all six plans with one right size, and the stage counts the docs gave');
+ok((await page.locator('#pd-fit').getAttribute('class')).includes('bad') && /Heavier than needed/.test(await text(page, '#pd-fit')) && /30/.test(await text(page, '#pd-stat')), 'stages: a one-file fix on the feature plan is called heavier than needed, with 30 stops');
+await page.check('#widget [data-plan="bugfix"]');
+ok((await page.locator('#pd-fit').getAttribute('class')).includes('ok') && /Right size/.test(await text(page, '#pd-fit')) && /\b6\b/.test(await text(page, '#pd-stat')), 'stages: the bugfix plan is the right size for a known bug, with 6 stops');
+eq(await page.locator('#pd-meter i').evaluate(e => e.style.width), '20%', 'stages: the bar shows 6 of 30 stages');
+await page.check('#widget [data-depth="2"]');
+ok((await page.locator('#pd-dials').getAttribute('class')).includes('bad') && /More than this job needs/.test(await text(page, '#pd-dials')) && /\b6\b/.test(await text(page, '#pd-stat')), 'stages: comprehensive depth for a small fix is too much, and it does not change the plan or its 6 stops');
+await page.check('#widget [data-depth="0"]'); await page.check('#widget [data-tests="2"]');
+ok((await page.locator('#pd-dials').getAttribute('class')).includes('ok') && /suit this job/.test(await text(page, '#pd-dials')), 'stages: minimal depth with comprehensive tests suits a critical bugfix, as the docs allow');
+await page.click('#widget [data-job="reg"]');
+ok(await D(page, () => document.activeElement.dataset.job === 'reg'), 'stages: focus stays on the job you picked');
+ok((await page.locator('#pd-fit').getAttribute('class')).includes('bad') && /Too light/.test(await text(page, '#pd-fit')), 'stages: the bugfix plan is too light for a regulated service');
+await page.check('#widget [data-plan="enterprise"]');
+ok(/Right size/.test(await text(page, '#pd-fit')) && (await page.locator('#pd-dials').getAttribute('class')).includes('bad') && /Thinner than this job needs/.test(await text(page, '#pd-dials')), 'stages: enterprise is the right plan, but minimal depth is still too thin for audit work');
+await page.check('#widget [data-depth="2"]');
+ok((await page.locator('#pd-dials').getAttribute('class')).includes('ok'), 'stages: comprehensive depth fixes it');
+
+await goLesson(page, 'agile', 'airules');
+ok(/reads 1 rule /.test(await text(page, '#rl-next')) && /personal data/.test(await text(page, '#rl-org')), 'rules: the organisation rule is there from the start');
+await page.click('#widget [data-c="typo"]');
+ok(/Not asked/.test(await text(page, '#rl-msg')) && (await page.locator('#rl-opts').count()) === 0 && /nothing yet/.test(await text(page, '#rl-audit')), 'rules: a one-off typo is not offered as a rule, and nothing is kept');
+await page.click('#widget [data-c="sku"]');
+eq(await page.locator('#rl-opts button').count(), 3, 'rules: a correction that would hold next time is asked about, with three choices');
+ok(/empty/.test(await text(page, '#rl-project')), 'rules: nothing is saved until you answer');
+await page.click('#widget [data-a="project"]');
+ok(/SKU/.test(await text(page, '#rl-project')) && /RULE_LEARNED, project\.md/.test(await text(page, '#rl-audit')) && /reads 2 rules/.test(await text(page, '#rl-next')), 'rules: yes for this project writes to project.md, adds an audit row, and the next stage reads two rules');
+await page.click('#widget [data-c="sku"]');
+ok(/already in the rules/.test(await text(page, '#rl-msg')) && /reads 2 rules/.test(await text(page, '#rl-next')), 'rules: the same lesson is not saved twice');
+await page.click('#widget [data-c="logs"]');
+ok(/never write personal data to logs/i.test(await text(page, '#rl-ask')) && /reads 2 rules/.test(await text(page, '#rl-next')), 'rules: a correction that clashes with an organisation rule quotes the rule and saves nothing yet');
+await page.click('#widget [data-a="skip"]');
+ok(/reads 2 rules/.test(await text(page, '#rl-next')), 'rules: skipping a clashing correction keeps nothing');
+await page.click('#widget [data-c="logs"]'); await page.click('#widget [data-a="revise"]');
+ok(/request ids/.test(await text(page, '#rl-project')) && /reads 3 rules/.test(await text(page, '#rl-next')), 'rules: a revised correction is saved to project.md');
+await page.click('#widget [data-c="say"]');
+ok(/without a question/.test(await text(page, '#rl-msg')) && /fixtures/.test(await text(page, '#rl-project')) && /reads 4 rules/.test(await text(page, '#rl-next')), 'rules: saying "keep this" saves it without a question');
+await page.uncheck('#rl-on'); await page.click('#widget [data-c="sku"]');
+ok(/Learnings are off/.test(await text(page, '#rl-msg')) && /reads 4 rules/.test(await text(page, '#rl-next')), 'rules: with learnings off nothing is asked and nothing is kept');
+await page.click('#widget [data-a="reset"]');
+ok(/reads 1 rule /.test(await text(page, '#rl-next')) && /nothing yet/.test(await text(page, '#rl-audit')), 'rules: reset empties the files and the audit trail');
+await page.check('#rl-on'); await page.click('#widget [data-c="sku"]'); await page.click('#widget [data-a="team"]');
+ok(/SKU/.test(await text(page, '#rl-team')) && /empty/.test(await text(page, '#rl-project')), 'rules: yes for the team writes to team.md, not project.md');
+
+await goLesson(page, 'agile', 'aifacilitate');
+ok(/0 of 3 landed/.test(await text(page, '#ub-stat')) && /Blocked until rider-preferences has landed/.test(await text(page, '#ub-board')) && (await page.locator('#widget [data-act="claim"][data-u="mail"]').count()) === 0, 'workshop: a unit that needs another is blocked, with no claim button');
+eq(await page.locator('#widget [data-act="claim"][data-u="prefs"]').count(), 2, 'workshop: a free unit can be claimed by either team');
+await page.click('#widget [data-act="push"]');
+ok((await page.locator('#ub-msg').getAttribute('class')).includes('bad') && /never push main/.test(await text(page, '#ub-msg')), 'workshop: pushing straight to main is not how the recipe works');
+await page.click('#widget [data-act="claim"][data-u="prefs"][data-t="Team 2"]');
+ok(/Team 2/.test(await text(page, '#ub-board')) && (await page.locator('#widget [data-act="pin"]').count()) === 0 && (await page.locator('#widget [data-act="claim"][data-u="prefs"]').count()) === 0, 'workshop: a claimed unit has one owner, and the lead has nothing to do until it is published');
+await page.click('#widget [data-act="publish"][data-u="prefs"]'); await page.click('#widget [data-act="pin"][data-u="prefs"]');
+eq(await page.locator('#widget [data-act="approve"], #widget [data-act="reject"]').count(), 2, 'workshop: after pinning, the lead can approve the merge gate or ask for changes');
+await page.click('#widget [data-act="reject"][data-u="prefs"]');
+ok(/1 change request\b/.test(await text(page, '#ub-stat')) && (await page.locator('#widget [data-act="publish"][data-u="prefs"]').count()) === 1 && /0 of 3 landed/.test(await text(page, '#ub-stat')), 'workshop: asking for changes sends the unit back to its team and nothing lands');
+await page.click('#widget [data-act="publish"][data-u="prefs"]'); await page.click('#widget [data-act="pin"][data-u="prefs"]'); await page.click('#widget [data-act="approve"][data-u="prefs"]');
+ok((await page.locator('#widget [data-act="land"][data-u="prefs"]').count()) === 1 && /0 of 3 landed/.test(await text(page, '#ub-stat')), 'workshop: an approved unit still has to be landed by the lead');
+await page.click('#widget [data-act="land"][data-u="prefs"]');
+ok(/1 of 3 landed/.test(await text(page, '#ub-stat')) && /reminder-email is now open/.test(await text(page, '#ub-msg')) && (await page.locator('#widget [data-act="claim"][data-u="mail"]').count()) === 2, 'workshop: landing the unit it depends on opens the blocked one');
+for (const id of ['core', 'mail']) {
+  await page.click('#widget [data-act="claim"][data-u="' + id + '"][data-t="Team 1"]');
+  for (const a of ['publish', 'pin', 'approve', 'land']) await page.click('#widget [data-act="' + a + '"][data-u="' + id + '"]');
+}
+ok(/3 of 3 landed/.test(await text(page, '#ub-stat')) && /build and test/.test(await text(page, '#ub-msg')), 'workshop: when every unit has landed, main moves on to build and test');
+await page.click('#widget [data-act="reset"]');
+ok(/0 of 3 landed/.test(await text(page, '#ub-stat')), 'workshop: reset clears the board');
+
+for (const c of ['aistages', 'airules', 'aifacilitate']) {
+  await goLesson(page, 'agile', c);
+  ok(await page.locator('#widget').isVisible() && await page.locator('#quiz').isVisible(), 'lesson draws its picture and quiz: ' + c);
+  await page.locator('#quiz [data-opt="0"]').click();
+}
+eq(page.errors, [], 'no script errors in the three new Track 9 lessons');
+
+  // ---------- tools ----------
+  section('Track 8: Tools in practice');
+  eq(shape.tracks[7], 4, 'track 8 (Tools in practice) has four lessons');
+  await goLesson(page, 'tools', 'copilot');
+  ok(/formatTimeRange/.test(await text(page, '#sc-editor')) && !/No slot/.test(await text(page, '#sc-editor')), 'in-editor: with no other file open, the suggestion guesses a helper name');
+  ok(!/\b(ok|bad)\b/.test(await page.locator('#sc-verdict').getAttribute('class')) && /Nothing is in your file until you accept/.test(await text(page, '#sc-verdict')), 'in-editor: a suggestion is only dimmed text until you accept it');
+  await page.click('#widget [data-a="accept"]');
+  ok((await page.locator('#sc-verdict').getAttribute('class')).includes('bad') && /does not exist/.test(await text(page, '#sc-verdict')), 'in-editor: accepting the guessed helper is called out as a function that does not exist');
+  await page.check('#widget [data-file="helpers"]');
+  ok(!/\b(ok|bad)\b/.test(await page.locator('#sc-verdict').getAttribute('class')) && /formatSlot/.test(await text(page, '#sc-editor')) && !/formatTimeRange/.test(await text(page, '#sc-editor')), 'in-editor: opening the helpers file changes the suggestion and clears the old decision');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.file === 'helpers'), 'in-editor: focus stays on the file you toggled');
+  await page.click('#widget [data-a="accept"]');
+  ok((await page.locator('#sc-verdict').getAttribute('class')).includes('bad') && /One test fails/.test(await text(page, '#sc-verdict')), 'in-editor: right helper but without the tests open, the empty case is missed');
+  await page.check('#widget [data-file="tests"]');
+  ok(/No slot/.test(await text(page, '#sc-editor')), 'in-editor: opening the tests file adds the empty-case line');
+  await page.click('#widget [data-a="accept"]');
+  ok((await page.locator('#sc-verdict').getAttribute('class')).includes('ok') && /still had to read it/.test(await text(page, '#sc-verdict')), 'in-editor: helpers and tests open give the right suggestion, and the verdict still says to read it');
+  const edBefore = await text(page, '#sc-editor');
+  await page.check('#widget [data-file="styles"]');
+  eq(await text(page, '#sc-editor'), edBefore, 'in-editor: an unrelated open file changes nothing');
+  await page.click('#widget [data-a="dismiss"]');
+  ok(!/formatSlot/.test(await text(page, '#sc-editor')) && /unchanged/.test(await text(page, '#sc-verdict')), 'in-editor: dismissing leaves the file as it was');
+  eq(await D(page, () => [{}, { helpers: true }, { helpers: true, tests: true }].map(WIDGETS._suggestOutcome)), ['missing', 'partial', 'good'], 'in-editor: the outcome rule is missing, partial, good');
+  ok(/Tool card: in-editor suggestions/.test(await text(page, '#widget')) && await page.locator('#widget .tag').count() === 1, 'in-editor: the tool card shows, with one row marked partly answered');
+
+  await goLesson(page, 'tools', 'claude');
+  eq(await page.locator('#ad-body tr').count(), 7, 'dial: seven actions are listed');
+  const t8dial = (l, s, h) => D(page, ([l, s, h]) => WIDGETS._dial(ACADEMY.lessons.claude, l, s, h), [l, s, h]);
+  eq(await t8dial('ask', false, 'sentence'), ['runs', 'asks', 'runs', 'asks', 'asks', 'asks', 'asks'], 'dial: asking first, only reads and read-only commands go ahead');
+  eq(await t8dial('edits', false, 'sentence'), ['runs', 'runs', 'runs', 'asks', 'asks', 'asks', 'runs'], 'dial: edits flow in the folder, other commands still ask');
+  eq(await t8dial('plan', false, 'rule'), ['runs', 'blocked', 'runs', 'asks', 'asks', 'asks', 'blocked'], 'dial: plan first blocks edits');
+  eq(await t8dial('auto', false, 'sentence'), ['runs', 'checked', 'checked', 'checked', 'checked', 'checked', 'checked'], 'dial: the second model decides for everything but a plain read');
+  eq(await t8dial('nobody', false, 'sentence'), ['runs', 'blocked', 'runs', 'blocked', 'blocked', 'blocked', 'blocked'], 'dial: where nobody can be asked, what would ask is refused');
+  eq(await t8dial('all', false, 'sentence'), ['runs', 'runs', 'runs', 'runs', 'runs', 'runs', 'runs'], 'dial: asking nothing runs everything, even the file you only asked it to leave alone');
+  eq(await t8dial('all', true, 'rule'), ['runs', 'runs', 'runs', 'runs', 'blocked', 'blocked', 'blocked'], 'dial: a sandbox and a deny rule still hold when nothing is asked');
+  ok(/2 it does alone, 5 it asks you/.test(await text(page, '#ad-verdict')) && (await page.locator('#ad-verdict').getAttribute('class')).includes('ok'), 'dial: the strictest level starts selected and counts what it asks');
+  await page.check('#widget [data-level="plan"]');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.level === 'plan') && /Plan first/.test(await text(page, '#ad-head th[aria-current]')), 'dial: focus and the highlighted column follow the level you pick');
+  await page.check('#widget [data-level="all"]');
+  ok((await page.locator('#ad-verdict').getAttribute('class')).includes('bad') && /isolated containers/.test(await text(page, '#ad-verdict')), 'dial: asking nothing is flagged and sent to isolated containers');
+  await page.check('#widget [data-how="rule"]');
+  ok(/6 it does alone, 0 it asks you, 0 a second model decides, 1 cannot happen/.test(await text(page, '#ad-verdict')) && /deny rule is checked first/.test(await text(page, '#ad-notes')), 'dial: a deny rule holds even at the ask-nothing level');
+  await page.check('#ad-sandbox');
+  ok(/4 it does alone/.test(await text(page, '#ad-verdict')) && /Sandbox on/.test(await text(page, '#ad-notes')), 'dial: the sandbox blocks writes outside the folder and calls out, whatever was approved');
+  ok(/Tool card: a terminal agent/.test(await text(page, '#widget')), 'dial: the tool card shows');
+
+  await goLesson(page, 'tools', 'devin');
+  eq(await D(page, () => [{}, { check: true }, { check: true, small: true }, { check: true, small: true, context: true }, { overgrant: true }, { check: true, small: true, context: true, overgrant: true }].map(WIDGETS._ticketOutcome)), ['nocheck', 'big', 'guess', 'good', 'overgrant', 'overgrant'], 'ticket: the outcome rule puts a leaked credential first, then the missing check, size and context');
+  ok(await page.locator('#tr-log li').count() === 0, 'ticket: nothing runs until you hand it off');
+  await page.click('#tr-go');
+  ok((await page.locator('#tr-verdict').getAttribute('class')).includes('bad') && /nothing shows it/.test(await text(page, '#tr-verdict')) && /no test to run/.test(await text(page, '#tr-log')), 'ticket: a vague ticket gets "Done" with nothing to test it against');
+  await page.check('#widget [data-ing="check"]');
+  ok(await page.locator('#tr-log li').count() === 0, 'ticket: changing the ticket clears the old run');
+  ok(/Done when the new test/.test(await text(page, '#tr-ticket')), 'ticket: the ticket text grows as you tick');
+  await page.click('#tr-go');
+  ok((await page.locator('#tr-verdict').getAttribute('class')).includes('bad') && /31 files/.test(await text(page, '#tr-verdict')), 'ticket: a check but no slicing gives a large change');
+  await page.check('#widget [data-ing="small"]');
+  await page.click('#tr-go');
+  ok(!/\b(ok|bad)\b/.test(await page.locator('#tr-verdict').getAttribute('class')) && /guessed/.test(await text(page, '#tr-verdict')), 'ticket: a check and a small slice, without the context, passes on a guess');
+  await page.check('#widget [data-ing="context"]');
+  await page.click('#tr-go');
+  ok((await page.locator('#tr-verdict').getAttribute('class')).includes('ok') && /shape that works/.test(await text(page, '#tr-verdict')), 'ticket: a check, a small slice and the context give a reviewable pull request');
+  await page.check('#widget [data-ing="overgrant"]');
+  await page.click('#tr-go');
+  ok((await page.locator('#tr-verdict').getAttribute('class')).includes('bad') && /least access/.test(await text(page, '#tr-verdict')) && /production database password/.test(await text(page, '#tr-log')), 'ticket: a credential in the sandbox gets used, and the walls do not help');
+  ok((await page.locator('#tr-gate').getAttribute('class')).includes('ok') && /moved from every step to one/.test(await text(page, '#tr-gate')), 'ticket: with a review, the approval has moved to the end');
+  await page.uncheck('#tr-review');
+  ok((await page.locator('#tr-gate').getAttribute('class')).includes('bad') && /gone/.test(await text(page, '#tr-gate')), 'ticket: without a review, the approval has gone');
+  ok(await D(page, () => document.activeElement && document.activeElement.id === 'tr-review'), 'ticket: focus stays on the review box');
+
+  await goLesson(page, 'tools', 'yours');
+  ok(/6 of 6/i.test(await text(page, '#tc-out')) && /not known yet/.test(await text(page, '#tc-auto')), 'card: an empty card has six questions unanswered');
+  await page.click('#widget [data-preset="editor"]');
+  ok(/\(1 of 6\)/i.test(await text(page, '#tc-out')) && /Where does my text go/.test(await text(page, '#tc-out .card:nth-child(2)')) && /It suggests, and you decide each one/.test(await text(page, '#tc-auto')) && await page.locator('#tc-out [data-flag]').count() === 0, 'card: the in-editor card leaves only the data question open, and raises no flag');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.preset === 'editor'), 'card: focus stays on the starting card you picked');
+  await page.click('#widget [data-preset="terminal"]');
+  ok(/It acts, and you approve each step/.test(await text(page, '#tc-auto')) && await page.locator('#tc-out [data-flag="wide"]').count() === 1, 'card: the terminal card reads and changes widely, so it raises the lethal-trifecta flag');
+  await page.click('#widget [data-preset="ticket"]');
+  ok(/It works alone, and you approve the result/.test(await text(page, '#tc-auto')) && await page.locator('#tc-out [data-flag="nobody"]').count() === 0, 'card: the ticket card works alone but is approved at the end');
+  await page.check('#widget [data-q="approves"][data-v="5"]');
+  ok(await page.locator('#tc-out [data-flag="nobody"]').count() === 1 && /nobody approves/.test(await text(page, '#tc-auto')), 'card: nobody approving, with real files reachable, raises a flag');
+  await page.check('#widget [data-q="data"][data-v="3"]');
+  ok(await page.locator('#tc-out [data-flag="data"]').count() === 1 && /\(0 of 6\)/i.test(await text(page, '#tc-out')) && /All six are answered/.test(await text(page, '#tc-out')), 'card: answering all six clears the unanswered list, and a data answer can raise its own flag');
+  await page.fill('#tc-name', 'Name of my own made-up tool');
+  ok(/Name of my own made-up tool/.test(await text(page, '#tc-out')) && await D(page, () => !/made-up tool/.test(JSON.stringify(ACADEMY_DEBUG.state()))), 'card: the name appears on the card and is not saved in your progress');
+  await page.click('#widget [data-preset="clear"]');
+  ok(/\(6 of 6\)/i.test(await text(page, '#tc-out')) && (await page.inputValue('#tc-name')) === '', 'card: clearing empties the card and the name');
+  eq(await D(page, () => { const L = ACADEMY.lessons.yours, all = { runs: '0', reads: '0', changes: '0', approves: '0', memory: '0', data: '0' }; return [WIDGETS._cardRead(L, {}).answered, WIDGETS._cardRead(L, all).unanswered.length, WIDGETS._cardRead(L, all).autonomy, WIDGETS._cardRead(L, { reads: '4', changes: '4' }).flags]; }), [0, 0, 'It suggests, and you decide each one', ['wide']], 'card: the read-out counts answers, maps approval to autonomy and flags wide reach');
+
+  // ---------- grounding ----------
+  // ------------------------------------------------------------------ track 4: grounding
+  section('Track 4: Grounding');
+  eq(await D(page, () => ['embed', 'search', 'rag', 'cite'].map(id => ACADEMY.lessons[id].quiz.map(q => q.a).slice().sort().join(''))), ['0123', '0123', '0123', '0123'], 'grounding: every lesson puts the right answer in each of the four positions once');
+  eq(await D(page, () => ACADEMY.tracks.filter(t => t.id === 'grounding')[0].concepts.filter(c => ACADEMY.lessons[c.id]).length), 4, 'grounding: all four concepts have a lesson');
+
+  await goLesson(page, 'grounding', 'embed');
+  eq(await D(page, () => WIDGETS._near(ACADEMY.lessons.embed, 'refund', 2).map(o => o.p.id)), ['cancel', 'money'], 'embeddings: the two nearest to "refund request" are "cancel my plan" and "money back please"');
+  ok((await page.locator('#em-verdict').getAttribute('class')).includes('ok') && /none of them shares a word/.test(await text(page, '#em-verdict')), 'embeddings: same-topic neighbours that share no word are called out as placed by meaning');
+  eq(await D(page, () => { const L = ACADEMY.lessons.embed, size = {}; L.points.forEach(p => size[p.g] = (size[p.g] || 0) + 1); return L.points.filter(p => WIDGETS._near(L, p.id, size[p.g] - 1).some(o => o.p.g !== p.g)).map(p => p.id); }), [], 'embeddings: for every phrase, its nearest neighbours (as many as its topic has) are all in its own topic');
+  await page.click('#widget [data-p="river"]');
+  ok((await page.locator('#em-verdict').getAttribute('class')).includes('ok') && /shares the word "bank"/.test(await text(page, '#em-verdict')) && /64\.6 units/.test(await text(page, '#em-verdict')), 'embeddings: "river bank flooded" shares "bank" with "my bank balance" yet sits 64.6 units away');
+  ok(/my bank balance/.test(await text(page, '#em-out')) && /different topic/.test(await text(page, '#em-out')), 'embeddings: the keyword card lists the shared-word phrase and marks it as a different topic');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.p === 'river'), 'embeddings: focus stays on the phrase you picked');
+  await page.click('#widget [data-p="refund"]');
+  await setRange(page, '#em-k', 4);
+  ok((await page.locator('#em-verdict').getAttribute('class')).includes('bad') && /sprint planning/.test(await text(page, '#em-verdict')) && /stranger/.test(await text(page, '#em-verdict')), 'embeddings: asking for four neighbours of a three-phrase topic brings in a stranger, and says so');
+  eq(await page.locator('#em-map [data-p]').count(), 16, 'embeddings: sixteen phrases on the map');
+  ok(/two numbers/.test(await text(page, '#em-vec')) && /hundreds or thousands/.test(await text(page, '#em-vec')), 'embeddings: the toy says it has two numbers and a real one has hundreds or thousands');
+  await setRange(page, '#em-k', 2);
+
+  await goLesson(page, 'grounding', 'search');
+  const sr = (q, cut) => D(page, a => { const r = WIDGETS._searchRun(ACADEMY.lessons.search, a[0], a[1]); return [r.kw.map(o => o.id), r.sem.map(o => o.id), r.pool]; }, [q, cut]);
+  eq(await sr('q2', false), [['D1', 'D7'], ['D2', 'D7', 'D1'], ['D1', 'D2', 'D7']], 'search: "I cannot get into my account" finds the wrong pages by keyword and the password page by meaning');
+  eq(await sr('q4', false), [['D3', 'D4', 'D8'], ['D4', 'D8', 'D3'], ['D3', 'D4', 'D8']], 'search: "call off my pickup" ties three pages by keyword, and meaning puts the cancelling page first');
+  eq(await sr('q3', false), [['D3'], ['D8', 'D6', 'D4'], ['D3', 'D8', 'D6']], 'search: the exact code is found by keyword and buried by meaning');
+  eq(await sr('q3', true), [['D3'], [], ['D3']], 'search: with a minimum score, meaning drops the code question altogether');
+  eq(await sr('q5', true), [[], [], []], 'search: with a minimum score, a question no page answers returns nothing');
+  await D(page, () => { document.querySelector('#sc-cut').checked = false; });
+  await page.click('#widget [data-q="q2"]');
+  ok((await page.locator('#sc-kw-v').getAttribute('class')).includes('bad') && (await page.locator('#sc-sem-v').getAttribute('class')).includes('ok'), 'search: on the locked-out question keywords fail and meaning wins');
+  await page.click('#widget [data-q="q3"]');
+  ok((await page.locator('#sc-kw-v').getAttribute('class')).includes('ok') && (await page.locator('#sc-sem-v').getAttribute('class')).includes('bad'), 'search: on the exact code keywords win and meaning fails');
+  await page.check('#sc-cut');
+  ok(/Nothing came back, but page D3 answers/.test(await text(page, '#sc-sem-v')) && /under the cut-off|under the cut/.test(await text(page, '#sc-sem')), 'search: the minimum score hides the right page too on a code, and the card says why');
+  await page.click('#widget [data-q="q5"]');
+  ok((await page.locator('#sc-kw-v').getAttribute('class')).includes('ok') && (await page.locator('#sc-sem-v').getAttribute('class')).includes('ok'), 'search: with the minimum score on, "nothing found" is the right result for a question no page answers');
+  await page.uncheck('#sc-cut');
+  ok((await page.locator('#sc-sem-v').getAttribute('class')).includes('bad') && /no page answers/.test(await text(page, '#sc-sem-v')), 'search: without it, meaning search presents a weak match as if it answered');
+  await page.click('#widget [data-q="q4"]');
+  eq(await page.locator('#sc-pl').count(), 0, 'search: the pool is hidden until you ask for it');
+  await page.check('#sc-pool');
+  ok((await page.locator('#sc-pl-v').getAttribute('class')).includes('ok') && (await page.locator('#sc-pl li').count()) === 3, 'search: the pool for "call off my pickup" holds three pages and includes the right one');
+  ok(await D(page, () => document.activeElement && document.activeElement.id === 'sc-pool'), 'search: focus stays on the checkbox you used');
+  await page.uncheck('#sc-pool');
+
+  await goLesson(page, 'grounding', 'rag');
+  const rr = (q, size, k, rule) => D(page, a => { const r = WIDGETS._ragRun(ACADEMY.lessons.rag, a[0], a[1], a[2], a[3]); return { order: r.order, sent: r.sent, key: r.key, tokens: r.tokens, ans: r.out[0], cls: r.out[1] }; }, [q, size, k, rule]);
+  eq((await rr('cancel', 'small', 1, true)).order, [2, 3, 4, 5, 1, 6, 7, 8], 'RAG: for the cancel question the sentence about cancelling ranks first and the fee sentence second');
+  let r1 = await rr('cancel', 'small', 1, true), r2 = await rr('cancel', 'small', 2, true);
+  eq([r1.key, r1.tokens, r2.key, r2.tokens], ['S2', 63, 'S2+S3', 77], 'RAG: one small chunk gets half the facts for 63 toy tokens, two get both for 77');
+  eq([(await rr('cancel', 'medium', 1, true)).order, (await rr('cancel', 'medium', 1, true)).key], [[2, 1, 3, 4], 'S3'], 'RAG: two-sentence chunks split the free period from the fee, and the fee chunk ranks first');
+  eq([(await rr('cancel', 'large', 1, true)).key, (await rr('cancel', 'large', 1, true)).tokens], ['S2+S3', 101], 'RAG: one four-sentence chunk holds both facts, for 101 toy tokens');
+  eq([(await rr('refund', 'small', 1, true)).tokens, (await rr('refund', 'large', 1, true)).tokens, (await rr('refund', 'small', 1, false)).tokens], [46, 69, 29], 'RAG: the refund question costs 46 tokens with one small chunk, 69 with a large one, and 17 fewer without the rule');
+  eq([(await rr('airport', 'small', 1, false)).cls, (await rr('airport', 'small', 1, true)).cls, (await rr('cancel', 'small', 1, false)).ans], ['bad', 'ok', 'Yes, cancelling is free.'], 'RAG: with no rule the model invents an airport answer and half-answers the cancel question with confidence');
+  await D(page, () => { const s = document.querySelector('#rg-k'); s.value = 1; s.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.click('#widget [data-q="cancel"]');
+  ok(/Missing/.test(await text(page, '#rg-verdict')) && !(await page.locator('#rg-verdict').getAttribute('class')).includes('ok') && /cannot say|do not say/.test(await text(page, '#rg-answer')), 'RAG: small chunks, one sent: the answer is incomplete, says what is missing, and admits the gap');
+  await page.uncheck('#rg-rule');
+  ok((await page.locator('#rg-verdict').getAttribute('class')).includes('bad') && /Yes, cancelling is free/.test(await text(page, '#rg-answer')), 'RAG: switch the rule off and the same missing fact becomes a confident wrong answer');
+  await page.check('#rg-rule');
+  await setRange(page, '#rg-k', 2);
+  ok((await page.locator('#rg-verdict').getAttribute('class')).includes('ok') && /half the fare/.test(await text(page, '#rg-answer')), 'RAG: send two chunks and the answer is complete');
+  ok(/77 toy tokens/.test(await text(page, '#rg-cost')) && /1\.7 times/.test(await text(page, '#rg-cost')) && /77,000/.test(await text(page, '#rg-cost')), 'RAG: the cost line shows 77 tokens, 1.7 times the cheapest setting, and the 1,000-question total');
+  await setRange(page, '#rg-k', 1);
+  await page.check('#widget [data-size="medium"]');
+  ok(/split across chunks/.test(await text(page, '#rg-verdict')) && (await page.locator('#rg-chunks .msg.sum').count()) === 1, 'RAG: two-sentence chunks, one sent: the needed facts were split by the cut, and the verdict says so');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.size === 'medium'), 'RAG: focus stays on the chunk size you picked');
+  await page.check('#widget [data-size="large"]');
+  ok((await page.locator('#rg-verdict').getAttribute('class')).includes('ok') && /did not need/.test(await text(page, '#rg-verdict')), 'RAG: one large chunk is complete but carries text the question did not need');
+  await setRange(page, '#rg-k', 3);
+  ok(/only 2 chunks exist/.test(await text(page, '#rg-kv')), 'RAG: asking for more chunks than exist is flagged');
+  await setRange(page, '#rg-k', 1); await page.check('#widget [data-size="small"]');
+
+  await goLesson(page, 'grounding', 'cite');
+  eq(await D(page, () => { const c = ACADEMY.lessons.cite.claims, n = {}; c.forEach(x => n[x.a] = (n[x.a] || 0) + 1); return [n.yes, n.part, n.no, c.every(x => x.cite === null || ACADEMY.lessons.cite.chunks.some(k => k.n === x.cite))]; }), [2, 1, 4, true], 'citations: two claims supported, one stretched, four not, and every pointer leads to a real chunk');
+  eq(await page.locator('#widget fieldset').count(), 7, 'citations: seven claims to judge');
+  eq(await page.locator('#widget fieldset >> nth=6').locator('.doc').count(), 0, 'citations: the uncited claim has no source to open');
+  await page.check('#widget [data-claim="c2"][data-v="yes"]');
+  ok(/half the fare/.test(await text(page, '#ct-body')) && (await page.locator('#ct-body .verdict.bad').count()) === 1, 'citations: calling the wrong-number claim supported is wrong, and the reason points at the chunk');
+  await page.check('#widget [data-claim="c1"][data-v="yes"]');
+  ok(/1 of 2 match/.test(await text(page, '#ct-score')) && (await page.locator('#ct-body .verdict.ok').count()) === 1, 'citations: a match with my judgment is counted');
+  ok(await D(page, () => document.activeElement && document.activeElement.dataset.claim === 'c1'), 'citations: focus stays on the choice you made');
+  ok(await page.locator('#ct-sum').isHidden(), 'citations: the summary waits until every claim is judged');
+  for (const [id, v] of Object.entries(await D(page, () => Object.fromEntries(ACADEMY.lessons.cite.claims.map(c => [c.id, c.a]))))) await page.check('#widget [data-claim="' + id + '"][data-v="' + v + '"]');
+  ok(await page.locator('#ct-sum').isVisible() && /pointer to a real chunk: 6 of 7/.test(await text(page, '#ct-sum')) && /fully supports: 2 of 7/.test(await text(page, '#ct-sum')), 'citations: six of seven claims have a valid pointer but only two are fully supported');
+
+  // ---------- evals ----------
+  section('Track 5: Evals and quality');
+  {
+    const prevPage = page; page = await open(browser);
+    const cls = async sel => (await page.locator(sel).getAttribute('class')) || '';
+    const pick = (id, m) => page.check('#widget [data-cid="' + id + '"][data-m="' + m + '"]');
+
+    // test sets: coverage, then tuning and holding back
+    await goLesson(page, 'evals', 'testset');
+    for (const id of ['c1', 'c2', 'c3']) await pick(id, 'tune');
+    ok(/0 of 6/.test(await text(page, '#tc-count')) && (await cls('#tc-verdict')).includes('bad') && /green/.test(await text(page, '#tc-verdict')), 'test set: three easy cases pass today and would show 0 of 6 faults, called false comfort');
+    await pick('c4', 'tune'); await pick('c5', 'tune');
+    ok(/1 of 6/.test(await text(page, '#tc-count')), 'test set: two cases for the same fault count as one fault');
+    ok(await D(page, () => document.activeElement.dataset.cid === 'c5' && document.activeElement.dataset.m === 'tune'), 'test set: focus stays on the choice you made');
+    for (const id of ['c1', 'c2', 'c3', 'c5']) await pick(id, 'out');
+    for (const id of ['c6', 'c7', 'c8', 'c9', 'c10']) await pick(id, 'tune');
+    ok(/6 of 6/.test(await text(page, '#tc-count')) && (await cls('#tc-verdict')).includes('ok'), 'test set: one case per fault would show all six');
+    eq(await D(page, () => { const L = ACADEMY.lessons.testset, r = WIDGETS._testcover(L, { c4: 'tune', c5: 'hold', c6: 'hold' }, true); return [r.tuneN, r.holdN, r.holdPass, r.left.length, r.unseen.length]; }), [1, 2, 1, 5, 4], 'test set: tuning on one fault fixes it; a held-back case on the same fault passes and one on another fault fails');
+    await page.click('#tc-tune');
+    ok(/Tune-on cases passing: 6 of 6/.test(await text(page, '#tc-count')) && /cannot tell/.test(await text(page, '#tc-verdict')) && (await cls('#tc-verdict')).includes('bad'), 'test set: tuning with nothing held back passes everything and says you cannot tell');
+    await pick('c10', 'hold'); await pick('c9', 'hold');
+    ok(/Held-back cases passing: 0 of 2/.test(await text(page, '#tc-count')) && /still fails/.test(await text(page, '#tc-verdict')), 'test set: held-back cases show faults the tuning never revealed');
+    ok(await D(page, () => document.querySelector('#tc-faults li.no span').textContent.includes('held-back case shows it')), 'test set: a fault only a held-back case shows is labelled so');
+    await page.click('#tc-undo');
+    ok(/Would be caught/.test(await text(page, '#tc-faults')) && await page.locator('#tc-tune').isEnabled(), 'test set: undoing the tuning returns to coverage');
+
+    // rubrics: two scorers and a vague criterion
+    await goLesson(page, 'evals', 'rubric');
+    ok(/3\s*of 6 scored the same/.test(await text(page, '#ra-score')) && /Both right:\s*2/.test(await text(page, '#ra-score')) && (await cls('#ra-verdict')).includes('bad'), 'rubric: with a vague criterion the scorers split on three of six');
+    eq(await D(page, () => [{}, { owners: true }, { long: true }, { owners: true, long: true }, { invented: true, owners: true, long: true }].map(on => { const r = WIDGETS._rubricAgree(ACADEMY.lessons.rubric, on); return [r.agree, r.right]; })), [[3, 2], [4, 3], [5, 4], [6, 5], [6, 6]], 'rubric: each written check removes disagreement; agreement without the invented-item check is still wrong once');
+    await page.check('#widget [data-chk="owners"]'); await page.check('#widget [data-chk="long"]');
+    ok(/6\s*of 6 scored the same/.test(await text(page, '#ra-score')) && /both are wrong on 1/.test(await text(page, '#ra-verdict')) && (await cls('#ra-verdict')).includes('bad'), 'rubric: agreeing on all six while both miss the invented item is called out');
+    ok(await D(page, () => document.activeElement.dataset.chk === 'long'), 'rubric: focus stays on the check you toggled');
+    await page.check('#widget [data-chk="invented"]');
+    ok(/6\s*of 6 scored the same/.test(await text(page, '#ra-score')) && /Both right:\s*6/.test(await text(page, '#ra-score')) && (await cls('#ra-verdict')).includes('ok'), 'rubric: with all three checks written, both scorers are right on all six');
+    ok(/Criterion: The summary is helpful\. No decision/.test(await text(page, '#ra-crit')), 'rubric: the written checks are added to the criterion text');
+    await page.uncheck('#widget [data-chk="owners"]'); await page.uncheck('#widget [data-chk="long"]'); await page.uncheck('#widget [data-chk="invented"]');
+
+    // judges: order, length and own style
+    await goLesson(page, 'evals', 'judges');
+    ok(/on 4 of 6/.test(await text(page, '#jb-score')) && (await cls('#jb-verdict')).includes('bad'), 'judges: run once in the written order, the judge agrees with people on 4 of 6');
+    await page.check('#widget [data-mode="swapped"]');
+    ok(/on 5 of 6/.test(await text(page, '#jb-score')), 'judges: the same judge and answers with the order swapped score 5 of 6');
+    await page.check('#widget [data-mode="both"]');
+    ok(/on 3 of 6/.test(await text(page, '#jb-score')) && /undecided on 3/.test(await text(page, '#jb-score')) && (await cls('#jb-verdict')).includes('ok') && (await page.locator('#jb-rows td', { hasText: 'Wrong' }).count()) === 0, 'judges: running both orders keeps 3 clear wins, none wrong, and marks 3 undecided');
+    eq(await D(page, () => ['order:written', 'order:swapped', 'order:both', 'length:plain', 'length:fixed', 'style:plain', 'style:fixed'].map(k => { const p = k.split(':'), r = WIDGETS._judgeBias(ACADEMY.lessons.judges, p[0], p[1]); return [r.right, r.wrong, r.tie]; })), [[4, 2, 0], [5, 1, 0], [3, 0, 3], [4, 2, 0], [5, 1, 0], [4, 2, 0], [5, 1, 0]], 'judges: the scripted verdicts give 4, 5 and 3 for order, and 4 then 5 for length and for own style');
+    await page.click('#widget [data-d="1"]');
+    ok(/longer one/.test(await text(page, '#jb-verdict')) && /on 4 of 6/.test(await text(page, '#jb-score')), 'judges: the length tab leans toward the longer answer');
+    ok(await D(page, () => document.activeElement.dataset.d === '1'), 'judges: focus stays on the tab you picked');
+    await page.check('#widget [data-mode="fixed"]');
+    ok(/on 5 of 6/.test(await text(page, '#jb-score')) && /still wrong/.test(await text(page, '#jb-verdict')), 'judges: the length fix helps, and one close call is still wrong');
+    await page.click('#widget [data-d="2"]');
+    ok(/same model family/.test(await text(page, '#jb-modes')) && /own style/.test(await text(page, '#jb-rows')), 'judges: the own-style tab labels which answer is the judge\'s own');
+    await page.click('#widget [data-d="0"]');
+    ok(await page.locator('#widget [data-mode="both"]').isChecked(), 'judges: each tab remembers how you ran its judge');
+
+    // regressions: baseline, pass bar, must-hold rule, reruns, accepting a baseline
+    await goLesson(page, 'evals', 'regress');
+    ok(/Ship/.test(await text(page, '#sg-decision')) && (await cls('#sg-verdict')).includes('bad') && /let a break through/.test(await text(page, '#sg-verdict')), 'regress: a bar on the total alone ships a version that breaks a must-hold case');
+    eq(await D(page, () => { const L = ACADEMY.lessons.regress, a = WIDGETS._shipgate(L, { bar: 60, must: false, rerun: false, baseline: true, accepted: false }), b = WIDGETS._shipgate(L, { bar: 60, must: true, rerun: true, baseline: true, accepted: false }); return [a.passBefore, a.passNow, a.fixed, a.broke, a.brokeMust, a.still, b.passNow, b.broke, b.brokeMust, b.decision]; }), [7, 8, 3, 2, 2, 2, 9, 1, 1, 'hold'], 'regress: seven passed before, eight now, three fixed and two broke; a rerun clears one break as noise');
+    await page.check('#sg-must');
+    ok(/Hold/.test(await text(page, '#sg-decision')) && (await cls('#sg-verdict')).includes('ok') && /may be noise/.test(await text(page, '#sg-verdict')), 'regress: the must-hold rule holds the version and flags the one that may be noise');
+    await page.check('#sg-rerun');
+    ok(/Hold/.test(await text(page, '#sg-decision')) && /all three reruns/.test(await text(page, '#sg-verdict')) && /9 of 12/.test(await text(page, '#sg-numbers')), 'regress: with reruns on, the flaky case counts as a pass and the real break is confirmed');
+    await page.uncheck('#sg-must'); await page.uncheck('#sg-rerun');
+    await page.locator('#sg-bar').evaluate(el => { el.value = 70; el.dispatchEvent(new Event('input', { bubbles: true })); });
+    ok(/Hold/.test(await text(page, '#sg-decision')) && /under the bar/.test(await text(page, '#sg-verdict')), 'regress: a bar of 70% holds a version that scores 67%, but only because of the total');
+    await page.locator('#sg-bar').evaluate(el => { el.value = 60; el.dispatchEvent(new Event('input', { bubbles: true })); });
+    await page.click('#sg-accept');
+    ok(/no later run will flag it/.test(await text(page, '#sg-verdict')) && await page.locator('#sg-reset').isEnabled() && (await page.locator('#sg-rows td', { hasText: 'Broke' }).count()) === 0, 'regress: accepting a version with a break makes the break part of the baseline');
+    await page.click('#sg-reset');
+    await page.uncheck('#sg-baseline');
+    ok(await page.locator('#sg-must').isDisabled() && /without a baseline|Without a baseline/.test(await text(page, '#sg-verdict')) && (await page.locator('#sg-head th').count()) === 3, 'regress: with no baseline the must-hold rule is unavailable and the before columns disappear');
+
+    await page.close(); page = prevPage;
+  }
+
+  // ---------- cost ----------
+section('Track 7: Cost and operations');
+{
+await goLesson(page, 'cost', 'tokcost');
+const cr = (kind, n, doc, size) => D(page, a => { const x = WIDGETS._costRun(ACADEMY.lessons.tokcost, a[0], a[1], a[2], a[3]); return [x.sumIn, x.sumOut, x.sumResent, +x.coins.toFixed(2)]; }, [kind, n, doc, size]);
+eq(await cr('chat', 10, 0, 0), [15250, 1500, 12600, 22.75], 'cost: ten short turns send 15,250 tokens in (12,600 of them earlier text sent again) and cost 22.75 toy coins');
+eq(await cr('doc', 10, 2, 0), [95250, 1500, 84600, 102.75], 'cost: the same chat with a long document attached costs 102.75, most of it the document sent again');
+eq(await cr('chat', 1, 0, 1), [400, 600, 0, 3.4], 'cost: one turn sends nothing again, and 600 tokens out cost more than 400 in');
+eq(await cr('agent', 8, 0, 0), [13000, 1350, 10150, 19.75], 'cost: an eight-step agent run re-sends the window every step and costs 19.75, against 1.9 for one answer');
+ok((await cr('chat', 20, 0, 0))[3] > 2 * (await cr('chat', 10, 0, 0))[3], 'cost: twice the turns costs more than twice as much');
+eq(await D(page, () => { const L = ACADEMY.lessons.tokcost, x = WIDGETS._costRun(L, 'chat', 10, 0, 0); return x.sumIn - x.sumResent === x.rows[9].inT; }), true, 'cost: the new input over a run adds up to the size of the last call');
+ok(/22\.75 coins for 10 turns/.test(await text(page, '#cc-total')) && await page.locator('#cc-bars .bar').count() === 10, 'cost: the page starts on a ten-turn chat with ten bars and the total in words');
+await page.click('#widget [data-kind="doc"]');
+ok(/102\.75 coins/.test(await text(page, '#cc-total')) && /83%|89%|88%|87%|86%|85%|84%|90%/.test(await text(page, '#cc-note')) && await D(page, () => document.activeElement.dataset.kind === 'doc'), 'cost: switching to a chat about a document shows the higher total, and focus stays on the button');
+await page.click('#widget [data-kind="agent"]');
+ok(/19\.75 coins for 8 steps/.test(await text(page, '#cc-total')) && await page.locator('#cc-bars .bar').count() === 8, 'cost: the agent run starts at eight steps');
+await setRange(page, '#cc-n', 1);
+ok(/Nothing has been sent again/.test(await text(page, '#cc-total')), 'cost: with one step nothing is sent again');
+
+await goLesson(page, 'cost', 'latency');
+const lr = (i, o, c, s) => D(page, a => { const x = WIDGETS._latencyRun(ACADEMY.lessons.latency, a[0], a[1], a[2], a[3]); return [x.first, x.last]; }, [i, o, c, s]);
+eq(await lr(0, 1, 1, false), [8.6, 8.6], 'latency: with streaming off the first word and the last word arrive together');
+eq(await lr(0, 1, 1, true), [0.62, 8.6], 'latency: streaming moves the first word to 0.62 s and leaves the last word at 8.6 s');
+const base = (await lr(0, 1, 1, true))[1], longOut = (await lr(0, 2, 1, true))[1], longIn = (await lr(1, 1, 1, true))[1];
+ok(Math.abs(longOut - base - 8) < 0.01 && Math.abs(longIn - base - 0.9) < 0.01, 'latency: doubling the answer adds 8 s to the last word, while a ten times longer prompt adds under a second');
+eq(await lr(0, 1, 4, true), [3.6 + 0.62, 8.6 + 3.6].map(x => +x.toFixed(2)), 'latency: four calls in a row add three more waits before the answer starts, even with streaming');
+ok(/8\.6 s<\/b>|8\.6 s/.test(await text(page, '#tl-out')) && /93%/.test(await text(page, '#tl-note')) && /writing the answer/.test(await text(page, '#tl-note')), 'latency: most of the default wait is the model writing the answer');
+await page.check('#tl-stream');
+ok(/0\.6 s/.test(await text(page, '#tl-out')) && /start reading at 0\.6 s/.test(await text(page, '#tl-note')) && await D(page, () => document.activeElement.id === 'tl-stream'), 'latency: switching streaming on shows the early first word, and focus stays on the box');
+await page.check('#widget [data-out="0"]'); await page.check('#widget [data-in="1"]');
+ok(/1\.5 s/.test(await text(page, '#tl-out')) && /57%/.test(await text(page, '#tl-note')) && /writing the answer/.test(await text(page, '#tl-note')), 'latency: a ten times longer prompt delays the first word by about a second, and even with a short answer the writing is still the biggest part');
+
+await goLesson(page, 'cost', 'cache');
+const cc = (ed, d, g) => D(page, a => { const x = WIDGETS._cacheRun(ACADEMY.lessons.cache, a[0], a[1], a[2]); return [x.hit, x.total, x.withC, x.withoutC]; }, [ed, d, g]);
+eq(await cc({}, 'end', 0), [8500, 8620, 14.75, 17.24], 'caching: with the date line near the end, 8,500 of 8,620 tokens are reused and caching saves money');
+eq((await cc({}, 'start', 0)).slice(0, 1), [0], 'caching: a date line at the very top means nothing is reused');
+const bad = await cc({}, 'start', 0); ok(bad[2] > bad[3], 'caching: nothing reused costs more than no caching, because saving the first copy has a premium');
+eq([(await cc({ instr: true }, 'end', 0))[0], (await cc({ chat: true }, 'end', 0))[0], (await cc({ ref: true }, 'end', 0))[0]], [0, 7000, 1000], 'caching: a small edit at the top loses everything below it, and the same edit lower down loses less');
+eq((await cc({}, 'end', 1))[0], 0, 'caching: a wait longer than the lifetime loses the saved copy');
+ok((await page.locator('#pc-verdict').getAttribute('class')).includes('ok') && /Only the new text at the end/.test(await text(page, '#pc-verdict')) && await page.locator('#pc-rows .tag.go').count() === 4, 'caching: the starting picture shows four reused parts and a good verdict');
+await page.check('#widget [data-edit="instr"]');
+ok((await page.locator('#pc-verdict').getAttribute('class')).includes('bad') && /Standing instructions/.test(await text(page, '#pc-verdict')) && await page.locator('#pc-rows .tag.go').count() === 0 && await D(page, () => document.activeElement.dataset.edit === 'instr'), 'caching: ticking a change to the standing instructions turns every part to read again, and focus stays');
+await page.uncheck('#widget [data-edit="instr"]'); await page.check('#widget [data-date="start"]');
+ok(/costs more than not caching/.test(await text(page, '#pc-verdict')) && /0%/.test(await text(page, '#pc-num')), 'caching: the date line at the top says so, in plain words');
+await page.check('#widget [data-date="end"]'); await page.check('#widget [data-gap="1"]');
+ok(/gone/.test(await text(page, '#pc-verdict')) && /expired/.test(await text(page, '#pc-rows')), 'caching: a late second request finds the saved copy expired');
+
+await goLesson(page, 'cost', 'size');
+const L4 = () => D(page, () => { const L = ACADEMY.lessons.size, all = z => Object.fromEntries(L.tasks.map(t => [t.id, z])), best = WIDGETS._routeBest(L), p = x => { const r = WIDGETS._routeRun(L, x); return [r.cost, +r.secs.toFixed(2), r.passN, r.failing, r.fixable]; }; return { large: p(all('l')), small: p(all('s')), best: p(best), bestMix: L.tasks.map(t => best[t.id]).join('') }; });
+const rr = await L4();
+eq(rr.large.slice(0, 3), [68520, 3.89, 7], 'model size: everything on Large costs 68,520 coins and passes seven of the eight jobs');
+eq(rr.small.slice(0, 3), [5660, 0.95, 4], 'model size: everything on Small is far cheaper and passes only four of eight');
+eq([rr.best[0], rr.best[2], rr.bestMix], [27320, 7, 'sssmllls'], 'model size: the cheapest mix that passes costs 27,320 (40% of Large) and keeps Large where nothing else passes');
+eq([rr.large[3], rr.large[4]], [['t7'], []], 'model size: the code-fix job fails on every size, so a bigger size is not the fix');
+ok(/not tested/.test(await text(page, '#rt-stat')) && /You can see cost and wait, but not quality/.test(await text(page, '#rt-verdict')) && !/ of 20/.test(await text(page, '#rt-body')), 'model size: before the test, cost and wait show and quality is hidden');
+await page.click('#widget [data-a="test"]');
+ok(/7 of 8/.test(await text(page, '#rt-stat')) && /of 20/.test(await text(page, '#rt-body')) && /Code fixes fails on every size/.test(await text(page, '#rt-verdict')) && (await page.locator('#rt-verdict').getAttribute('class')).includes('ok'), 'model size: running the test set shows each score, and names the job that fails everywhere');
+await page.click('#widget [data-a="small"]');
+ok((await page.locator('#rt-verdict').getAttribute('class')).includes('bad') && /Meeting actions/.test(await text(page, '#rt-verdict')) && /4 of 8/.test(await text(page, '#rt-stat')), 'model size: everything on Small is flagged, with the jobs that need a bigger size');
+await page.click('#widget [data-a="best"]');
+ok(/27,320/.test(await text(page, '#rt-stat')) && (await page.locator('#rt-verdict').getAttribute('class')).includes('ok') && await D(page, () => document.activeElement.dataset.a === 'best'), 'model size: the cheapest passing mix is applied, and focus stays on the button');
+await page.check('#widget [data-task="t4"][data-size="s"]');
+ok((await page.locator('#rt-verdict').getAttribute('class')).includes('bad') && /Meeting actions/.test(await text(page, '#rt-verdict')) && await D(page, () => document.activeElement.dataset.task === 't4' && document.activeElement.dataset.size === 's'), 'model size: moving one job down to a size that misses the bar is flagged, and focus stays');
+}
+
   // @@TRACK-TESTS (new tracks add their checks above this line)
 
   // ------------------------------------------------------------------ sandbox
