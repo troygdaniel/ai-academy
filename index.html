@@ -9,10 +9,10 @@
 <body>
 <header id="bar">
   <div class="brand"><i></i>AI Academy</div>
-  <span class="chip hot" id="c-streak" title="Days in a row with some study"></span>
+  <span class="chip" id="c-streak" title="Days in a row with some study"></span>
   <span class="chip" id="c-level" title="XP: 100 per level"></span>
   <span class="chip" id="c-goal" title="Minutes studied today against your daily goal"></span>
-  <button class="chip btn" id="c-review" type="button"></button>
+  <button class="chip btn" id="c-review" type="button" aria-keyshortcuts="R"></button>
   <button class="chip btn" id="c-menu" type="button" aria-haspopup="true" aria-expanded="false">Menu</button>
 </header>
 <div class="pop" id="menu" hidden></div>
@@ -25,14 +25,17 @@
 </main>
 
 <nav id="zoombar" aria-label="Zoom">
-  <button class="z" id="z-out" type="button" aria-label="Zoom out" title="Zoom out ( - )">−</button>
-  <div class="stops" id="z-stops"></div>
-  <button class="z" id="z-in" type="button" aria-label="Zoom in" title="Zoom in ( + )">+</button>
+  <button class="z" id="z-out" type="button" aria-label="Zoom out" aria-keyshortcuts="-" title="Zoom out ( - )">−</button>
+  <div class="stops" id="z-stops" role="group" aria-label="Zoom stops"></div>
+  <button class="z" id="z-in" type="button" aria-label="Zoom in" aria-keyshortcuts="+" title="Zoom in ( + )">+</button>
   <span class="crumb" id="crumb"></span>
+  <span class="zhint" aria-hidden="true"><kbd>-</kbd><kbd>+</kbd><span>zoom</span><kbd>←</kbd><kbd>→</kbd><kbd>Enter</kbd><span>move, open</span><kbd>Esc</kbd><span>up</span></span>
+  <button id="z-keys" type="button" aria-label="Keyboard shortcuts" aria-keyshortcuts="?" title="Keyboard shortcuts ( ? )"><kbd aria-hidden="true">?</kbd>keys</button>
 </nav>
 
 <div id="review" role="dialog" aria-modal="true" aria-labelledby="rv-title" hidden></div>
 <div id="sandbox" role="dialog" aria-modal="true" aria-labelledby="sb-title" hidden></div>
+<div id="keys" role="dialog" aria-modal="true" aria-labelledby="ky-title" hidden></div>
 
 <script src="content.js"></script>
 <script src="widgets.js"></script>

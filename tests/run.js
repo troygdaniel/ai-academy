@@ -519,7 +519,7 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   section('Keyboard only');
   await page.keyboard.press('Tab');
   const seen = []; for (let i = 0; i < 12; i++) { seen.push(await D(page, () => { const a = document.activeElement; return a.id || a.dataset.space || a.dataset.act || a.dataset.track || a.tagName; })); await page.keyboard.press('Tab'); }
-  ok(seen.includes('c-review') && seen.includes('c-menu') && seen.includes('roles') && seen.includes('continue') && seen.includes('models'), 'Tab reaches the top bar, the map switch, Continue and the tracks, in order', seen.join(' '));
+  ok(seen.includes('c-review') && seen.includes('c-menu') && seen.includes('learn') && seen.includes('continue') && seen.includes('models'), 'Tab reaches the top bar, the map switch, Continue and the tracks, in order', seen.join(' '));
   ok(await D(page, () => { const a = document.activeElement, s = getComputedStyle(a); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2; }), 'the focused control has a visible outline');
   await page.focus('#c-menu'); await page.keyboard.press('Enter');
   ok(await page.locator('#menu').isVisible() && await D(page, () => document.querySelector('#menu').contains(document.activeElement)), 'Enter on Menu opens it and moves focus inside');
