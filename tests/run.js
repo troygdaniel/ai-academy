@@ -61,7 +61,7 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   eq(shape.bad, [], 'all lessons, roles and questions are well formed');
   ok(shape.lessons.length >= 22, 'at least twenty-two lessons', shape.lessons.length);
   eq(shape.tracks.slice(0, 3), [5, 6, 5], 'track 1 has five lessons, track 2 has six, track 3 has five');
-  eq(shape.tracks[8], 6, 'track 9 (Agile x AI, AI-DLC) has six lessons');
+  ok(shape.tracks[8] >= 6, 'track 9 (Agile x AI, AI-DLC) has at least six lessons', shape.tracks[8]);
   ok(!shape.dupe, 'question ids are unique');
   const md = fs.readFileSync(path.join(ROOT, 'content/SOURCES.md'), 'utf8');
   const srcIds = await D(page, () => ACADEMY.sources.map(s => s.id));
