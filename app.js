@@ -188,8 +188,8 @@
     A.tracks.forEach(function (t, i) {
       var rd = readyIn(t).length, pct = trackPct(t), here = S.pos.track === t.id;
       h += '<button type="button" class="tcard' + (rd ? '' : ' soon') + (here ? ' here' : '') + '" data-track="' + t.id + '" style="--c:' + hue(i) + '" title="' + esc(t.blurb) + '"' + (here ? ' aria-current="true"' : '') + '>' +
-        '<span class="tring">' + ring(pct, 76, 'hue') + '<b>' + (i + 1) + '</b><em>' + pctTxt(pct) + '</em></span>' +
-        '<span class="tx"><span class="n">Track ' + (i + 1) + '</span><span class="tt">' + esc(t.title) + '</span></span>' +
+        '<span class="tring">' + ring(pct, 76, 'hue') + '<b>' + (i + 1) + '</b></span>' +
+        '<span class="tx"><span class="n">Track ' + (i + 1) + ' · ' + pctTxt(pct) + '</span><span class="tt">' + esc(t.title) + '</span></span>' +
         '<span class="state' + (rd ? ' go' : '') + '">' + (rd ? rd + (rd === 1 ? ' lesson' : ' lessons') + ' ready' : 'coming') + '</span>' +
         segs(t.concepts.map(function (c) { return { p: setPct(c.id), cls: A.lessons[c.id] ? (here && c.id === S.pos.concept ? 'at' : '') : 'soon' }; })) + '</button>';
     });
@@ -223,7 +223,7 @@
       if (WIDGETS[L.widget]) WIDGETS[L.widget](host, L, sandboxApi); else host.innerHTML = '<p class="muted">No picture for this one yet.</p>';
     }
     $('#lrail', el).innerHTML = readyIn(t).map(function (x, i) { // the lessons of this track, as a rail you can walk with the arrows
-      return '<button type="button" data-concept="' + x.id + '" class="' + (S.done[x.id] ? 'done' : '') + '"' + (x.id === c.id ? ' aria-current="true"' : '') + ' title="' + esc(x.title) + '" aria-label="Lesson ' + (i + 1) + ': ' + esc(x.title) + (S.done[x.id] ? ', done' : '') + '">' + (i + 1) + '</button>';
+      return '<button type="button" data-concept="' + x.id + '" class="' + (S.done[x.id] ? 'ok' : '') + '"' + (x.id === c.id ? ' aria-current="true"' : '') + ' title="' + esc(x.title) + '" aria-label="Lesson ' + (i + 1) + ': ' + esc(x.title) + (S.done[x.id] ? ', done' : '') + '">' + (i + 1) + '</button>';
     }).join('');
     startQuiz(c.id, '#quiz'); renderQuiz();
   }
@@ -241,7 +241,7 @@
   var famFilter = '';
   function famIndex(id) { return RO.families.indexOf(famOf(id)); }
   function renderTree() {
-    var CW = 186, RH = 80, NW = 162, NH = 52, GX = 30, GY = 48, W = GX + RO.families.length * CW + 8, H = GY + RO.rows * RH + 6;
+    var CW = 186, RH = 80, NW = 162, NH = 54, GX = 30, GY = 48, W = GX + RO.families.length * CW + 8, H = GY + RO.rows * RH + 6;
     function pos(n) { return { x: GX + famIndex(n.fam) * CW + (CW - NW) / 2, y: GY + n.row * RH + (RH - NH) / 2 }; }
     var svg = '<svg class="edges" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">';
     RO.edges.forEach(function (e) {
@@ -259,13 +259,13 @@
     });
     RO.nodes.forEach(function (n) {
       var p = pos(n), here = S.pos.role === n.id;
-      nodes += '<button type="button" class="rnode' + (n.forecast ? ' fc' : '') + (n.you ? ' you' : '') + (here ? ' here' : '') + (famFilter && famFilter !== n.fam ? ' dim' : '') + '" data-role="' + n.id + '"' + (here ? ' aria-current="true"' : '') + ' style="--c:' + hue(famIndex(n.fam)) + ';left:' + p.x + 'px;top:' + p.y + 'px;width:' + NW + 'px;height:' + NH + 'px">' + esc(n.title) + (n.forecast ? '<small>forecast</small>' : n.you ? '<small>your role</small>' : '') + '</button>';
+      nodes += '<button type="button" class="rnode' + (n.title.length > 30 ? ' long' : '') + (n.forecast ? ' fc' : '') + (n.you ? ' you' : '') + (here ? ' here' : '') + (famFilter && famFilter !== n.fam ? ' dim' : '') + '" data-role="' + n.id + '"' + (here ? ' aria-current="true"' : '') + ' style="--c:' + hue(famIndex(n.fam)) + ';left:' + p.x + 'px;top:' + p.y + 'px;width:' + NW + 'px;height:' + NH + 'px">' + esc(n.title) + (n.forecast ? '<small>forecast</small>' : n.you ? '<small>your role</small>' : '') + '</button>';
     });
     var chips = '<button type="button" data-filter=""' + (famFilter ? '' : ' class="on"') + ' aria-pressed="' + !famFilter + '">All</button>';
     RO.families.forEach(function (f) { chips += '<button type="button" data-filter="' + f.id + '"' + (famFilter === f.id ? ' class="on"' : '') + ' aria-pressed="' + (famFilter === f.id) + '">' + esc(f.title) + '</button>'; });
-    $('#L0').innerHTML = '<div class="wrap wide"><div class="head">' + spaceTabs() + '<h1>A family tree of AI-era roles</h1><div class="exs sp" role="group" aria-label="Show one family" style="margin:0">' + chips + '</div></div>' +
+    $('#L0').innerHTML = '<div class="wrap wide"><div class="head">' + spaceTabs() + '<h1>A family tree of AI-era roles</h1></div>' +
       '<div class="treegrid"><div class="card treebox"><div class="tree" data-primary style="width:' + W + 'px;height:' + H + 'px"><span class="axis" style="top:' + (GY + 8) + 'px">earlier</span><span class="axis" style="top:' + (H - 30) + 'px">later</span>' + svg + nodes + '</div></div>' +
-      '<aside style="display:grid;gap:18px"><div class="panel peek" id="peek"></div><div class="panel"><p class="legend"><span><i class="l grew"></i>grew out of</span><span><i class="l move"></i>influence or a common move</span><span><i class="b fc"></i>forecast, not fact</span></p>' +
+      '<aside style="display:grid;gap:18px"><div class="panel peek" id="peek"></div><div class="panel"><div class="label">Show</div><div class="exs" role="group" aria-label="Show one family">' + chips + '</div><p class="legend"><span><i class="l grew"></i>grew out of</span><span><i class="l move"></i>influence or a common move</span><span><i class="b fc"></i>forecast, not fact</span></p>' +
       '<p class="note" style="margin-top:12px">' + esc(RO.blurb) + '</p><p class="note">' + RO.credit + '</p></div></aside></div></div>';
     peek(roleOf(S.pos.role) ? S.pos.role : RO.nodes[0].id);
   }
@@ -481,14 +481,15 @@
     if (t.dataset && t.dataset.role && t.classList.contains('rnode')) peek(t.dataset.role);
   });
   document.addEventListener('mouseover', function (e) { var n = e.target.closest ? e.target.closest('.rnode') : null; if (n) peek(n.dataset.role); });
-  function spatial(items, cur, key) { // the nearest item in the direction of the arrow, favouring the same row or column
+  function spatial(items, cur, key) { // the nearest item in the direction of the arrow: first one in the same row or column, failing that the closest at an angle
     var a = cur.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2, best = null, bs = Infinity, horiz = key === 'ArrowLeft' || key === 'ArrowRight';
     items.forEach(function (el) {
       if (el === cur || !el.getClientRects().length) return;
       var b = el.getBoundingClientRect(), dx = b.left + b.width / 2 - ax, dy = b.top + b.height / 2 - ay;
       var main = key === 'ArrowRight' ? dx : key === 'ArrowLeft' ? -dx : key === 'ArrowDown' ? dy : -dy, cross = Math.abs(horiz ? dy : dx);
-      if (main <= 2 || cross > main * 4 + (horiz ? a.height : a.width)) return;
-      var s = main + cross * 3; if (s < bs) { bs = s; best = el; }
+      var inLine = horiz ? b.top < a.bottom - 2 && b.bottom > a.top + 2 : b.left < a.right - 2 && b.right > a.left + 2;
+      if (main <= 2 || (!inLine && cross > main * 2)) return;
+      var s = main + (inLine ? 0 : 10000 + cross * 3); if (s < bs) { bs = s; best = el; }
     });
     return best;
   }
@@ -532,7 +533,7 @@
     var d = b.dataset;
     if (b.closest('.widget')) return; // widgets handle their own buttons
     if (d.space) { act(function () { S.pos.space = d.space; go(0); }); var tab = $('#L0 [data-space="' + d.space + '"]'); if (tab) tab.focus(); return; } // the switch keeps focus, so the arrows can flip back
-    if (d.track) return act(function () { go(1, d.track); });
+    if (d.track) return act(function () { go(1, d.track === S.pos.track && S.pos.space === 'learn' ? null : d.track); }); // the track you are in keeps its lesson
     if (d.concept) return act(function () { go(2, null, d.concept); });
     if (d.fam) return act(function () { goRole(1, d.fam); });
     if (d.role) return act(function () { goRole(2, null, d.role); });

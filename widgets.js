@@ -7,7 +7,7 @@ var WIDGETS = {};
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function $(s, r) { return r.querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call(r.querySelectorAll(s)); }
-  function exButtons(list) { var h = '<div class="exs">'; list.forEach(function (e, i) { h += '<button type="button" data-ex="' + i + '">' + esc(e.label) + '</button>'; }); return h + '</div>'; }
+  function exButtons(list) { var h = '<div class="exs" role="group" aria-label="Examples">'; list.forEach(function (e, i) { h += '<button type="button" data-ex="' + i + '">' + esc(e.label) + '</button>'; }); return h + '</div>'; }
   function onClick(root, fn) { root.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && root.contains(b)) fn(b.dataset, b); }); }
   // state that should survive a redraw of the lesson (not saved to disk)
   var MEM = {};
@@ -211,7 +211,7 @@ var WIDGETS = {};
     function update() {
       $('#wr-doc', root).textContent = L.doc;
       $$('input[name="wr-mode"]', root).forEach(function (r) { r.checked = r.value === st.mode; });
-      $('#wr-qs', root).innerHTML = L.questions.map(function (q, i) { return '<button type="button" data-q="' + i + '"' + (st.asked && i === st.q ? ' class="on"' : '') + '>' + esc(q.q) + '</button>'; }).join('');
+      $('#wr-qs', root).innerHTML = L.questions.map(function (q, i) { return '<button type="button" data-q="' + i + '"' + (st.asked && i === st.q ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(q.q) + '</button>'; }).join('');
       var q = L.questions[st.q], a = answer(q, st.mode);
       $('#wr-chat', root).innerHTML = st.asked ? '<div class="msg you"><span class="who">You</span>' + esc(q.q) + '</div><div class="msg model"><span class="who">Toy model</span>' + esc(a[0]) + '</div>' : '<p class="muted">Pick a question. Notice the tone of each answer before you check it.</p>';
       $('#wr-check', root).hidden = !st.asked || st.checked;
@@ -222,7 +222,7 @@ var WIDGETS = {};
       var r = { always: [0, 0, 0], idk: [0, 0, 0], doc: [0, 0, 0] }; // right, invented, abstain
       L.questions.forEach(function (qq) { ['always', 'idk', 'doc'].forEach(function (m) { var k = answer(qq, m)[1]; r[m][k === 'right' ? 0 : k === 'invented' ? 1 : 2]++; }); });
       var h = '<div class="scroll"><table class="mini"><caption>All ' + L.questions.length + ' questions, scored two ways</caption><thead><tr><th scope="col">Set-up</th><th scope="col">Right</th><th scope="col">Invented</th><th scope="col">"Do not know"</th><th scope="col">Score if a wrong answer costs nothing</th><th scope="col">Score if a wrong answer costs a point</th></tr></thead><tbody>';
-      modes.forEach(function (m) { var x = r[m[0]]; h += '<tr' + (m[0] === st.mode ? ' class="on"' : '') + '><th scope="row">' + esc(m[1]) + '</th><td>' + x[0] + '</td><td>' + x[1] + '</td><td>' + x[2] + '</td><td>' + x[0] + '</td><td>' + (x[0] - x[1]) + '</td></tr>'; });
+      modes.forEach(function (m) { var x = r[m[0]]; h += '<tr' + (m[0] === st.mode ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '><th scope="row">' + esc(m[1]) + '</th><td>' + x[0] + '</td><td>' + x[1] + '</td><td>' + x[2] + '</td><td>' + x[0] + '</td><td>' + (x[0] - x[1]) + '</td></tr>'; });
       $('#wr-score', root).innerHTML = h + '</tbody></table></div><p class="note">When a wrong answer costs nothing, bluffing never scores below honesty, and a lucky guess would score above it. That is the incentive the lesson talks about.</p>';
     }
     root.addEventListener('change', function (e) { if (e.target.name === 'wr-mode') { st.mode = e.target.value; st.checked = false; update(); } });
@@ -288,17 +288,19 @@ var WIDGETS = {};
     return h + '</ul>';
   }
 
+  function segsHtml(sc) { return sc.parts.map(function (p) { return '<i style="--p:' + (p.ok ? 100 : 0) + '%"></i>'; }).join(''); } // the score as a bar: one cell per part
   // opts.full: the big sandbox sheet (adds the names watch list). In a lesson it is the same thing, smaller.
   WIDGETS.sandbox = function (root, L, api) {
     var st = L.full ? { text: L.text !== undefined ? L.text : '' } : mem('sandbox', { text: L.examples[0].text });
     var names = api && api.names ? api.names() : [];
     root.innerHTML = '<label class="lab" for="sb-text">Your prompt</label><textarea class="wtext tall" id="sb-text" maxlength="4000" spellcheck="false" placeholder="Write or paste a prompt. Use made-up data."></textarea>' + exButtons(L.examples) +
-      '<div class="sbgrid"><div><h4 id="sb-score"></h4><div id="sb-rubric"></div></div><div><h4>Real data check</h4><div id="sb-warn" role="status"></div>' +
+      '<div class="sbgrid"><div><h4 id="sb-score"></h4><div class="segs" id="sb-segs" aria-hidden="true"></div><div id="sb-rubric"></div></div><div><h4>Real data check</h4><div id="sb-warn" role="status"></div>' +
       '<label class="lab" for="sb-names">Names to watch for (people, clients, projects), separated by commas</label><input type="text" id="sb-names" autocomplete="off" spellcheck="false" placeholder="for example: Heron, Jo Sample"><p class="note">Kept in this browser only, and left out of the Save file.</p></div></div>' +
       (L.full ? '<p class="note">This sandbox never calls a model. It scores the prompt by pattern matching, in your browser. A high score means the parts seem to be present, not that the prompt is right. The prompt is not saved. The names you list are kept in this browser only, and are left out of the Save file.</p>' : '<div class="row"><button type="button" class="btn" data-a="full">Open the full sandbox</button></div>');
     function update() {
       var sc = scorePrompt(st.text), w = scanData(st.text, names), h;
       $('#sb-score', root).textContent = 'Rubric: ' + sc.n + ' of 6 parts found';
+      $('#sb-segs', root).innerHTML = segsHtml(sc);
       $('#sb-rubric', root).innerHTML = rubricHtml(sc) + (sc.words && sc.words < 6 ? '<p class="note">Very short. Fine for a tiny job; otherwise the model will fill the gaps with guesses.</p>' : '');
       if (!st.text.trim()) h = '<p class="muted" style="margin:0">Nothing to check yet.</p>';
       else if (!w.length) h = '<p class="verdict ok">No obvious real data found. This is a simple pattern check, so still read it through yourself.</p>';
@@ -540,7 +542,7 @@ var WIDGETS = {};
         h = '<div class="phase"><h4>Session 2 <span class="tag">a fresh window</span></h4><p class="note" style="margin:0 0 6px">What the tool put in the window before you typed anything:</p>' +
           '<div class="msg sys"><span class="who">System instructions</span>' + esc(L.system) + '</div><div class="msg sum" style="margin-top:8px"><span class="who">Notes file</span><span style="white-space:pre-wrap">' + esc(notes) + '</span></div>' +
           '<label class="check" style="margin-top:12px"><input type="checkbox" data-change="1"' + (st.changed ? ' checked' : '') + '> ' + esc(L.change.label) + '</label>' +
-          '<p class="note" style="margin-top:12px">Ask:</p><div class="exs">' + L.facts.map(function (x) { return '<button type="button" data-ask="' + x.id + '"' + (x.id === st.asked ? ' class="on"' : '') + '>' + esc(x.ask) + '</button>'; }).join('') + '</div>' +
+          '<p class="note" style="margin-top:12px">Ask:</p><div class="exs">' + L.facts.map(function (x) { return '<button type="button" data-ask="' + x.id + '"' + (x.id === st.asked ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(x.ask) + '</button>'; }).join('') + '</div>' +
           (f ? '<div class="chat" aria-live="polite"><div class="msg you"><span class="who">You</span>' + esc(f.ask) + '</div><div class="msg model"><span class="who">Agent</span>' + esc(ans) + '</div></div><p class="verdict ' + cls + '" id="mm-verdict" role="status">' + esc(why) + '</p>' : '') +
           '<div class="row"><button type="button" class="btn" data-a="back">Back to session 1</button></div></div>';
       }
@@ -591,7 +593,7 @@ var WIDGETS = {};
     root.innerHTML = '<p class="note" style="margin:0 0 6px">Pick a classic Agile word:</p><div class="exs" id="tm-pick"></div><div id="tm-card" aria-live="polite"></div>';
     function update() {
       var t = L.terms[st.i], aws = t.source === 'aws';
-      $('#tm-pick', root).innerHTML = L.terms.map(function (x, i) { return '<button type="button" data-t="' + i + '"' + (i === st.i ? ' class="on"' : '') + '>' + esc(x.old) + '</button>'; }).join('');
+      $('#tm-pick', root).innerHTML = L.terms.map(function (x, i) { return '<button type="button" data-t="' + i + '"' + (i === st.i ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(x.old) + '</button>'; }).join('');
       $('#tm-card', root).innerHTML = '<div class="two"><div class="card"><h3>Classic Agile</h3><p><b>' + esc(t.old) + '</b></p></div>' +
         '<div class="card"><h3>In AI-DLC</h3><p><b>' + esc(t.now) + '</b> <span class="tag' + (aws ? ' go' : '') + '">' + (aws ? 'AWS says' : 'My mapping') + '</span></p></div></div>' +
         '<p class="verdict"><b>Stays the same:</b> ' + esc(t.same) + '</p><p class="verdict"><b>Changes:</b> ' + esc(t.diff) + '</p>';
@@ -641,7 +643,7 @@ var WIDGETS = {};
     function bucket(id) { return L.buckets.filter(function (b) { return b.id === id; })[0]; }
     function update() {
       var ph = L.phases[st.p], right = 0, done = 0;
-      $('#wd-tabs', root).innerHTML = L.phases.map(function (x, i) { return '<button type="button" data-p="' + i + '"' + (i === st.p ? ' class="on"' : '') + '>' + esc(x.title) + '</button>'; }).join('');
+      $('#wd-tabs', root).innerHTML = L.phases.map(function (x, i) { return '<button type="button" data-p="' + i + '"' + (i === st.p ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + esc(x.title) + '</button>'; }).join('');
       $('#wd-body', root).innerHTML = ph.cards.map(function (c) {
         var pick = st.a[c.id], fb = '';
         if (pick) { done++; if (pick === c.to) right++; fb = '<p class="verdict ' + (pick === c.to ? 'ok' : 'bad') + '">' + (pick === c.to ? '' : 'I would sort this as "' + esc(bucket(c.to).label) + '". ') + esc(c.why) + '</p>'; }
@@ -692,7 +694,7 @@ var WIDGETS = {};
     function cur() { return L.prompts[st.i]; }
     function draw() {
       var p = cur(), len = (st.text[p.id] || '').trim().length, shown = !!st.shown[p.id];
-      $('#rh-pick', root).innerHTML = L.prompts.map(function (x, i) { return '<button type="button" data-q="' + i + '"' + (i === st.i ? ' class="on"' : '') + '>Question ' + (i + 1) + '</button>'; }).join('');
+      $('#rh-pick', root).innerHTML = L.prompts.map(function (x, i) { return '<button type="button" data-q="' + i + '"' + (i === st.i ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>Question ' + (i + 1) + '</button>'; }).join('');
       $('#rh-q', root).textContent = p.q;
       $('#rh-show', root).disabled = shown || len < MIN;
       $('#rh-hint', root).textContent = shown ? '' : (len < MIN ? ' Write at least a sentence first.' : '');

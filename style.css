@@ -65,10 +65,11 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 /* one focus ring, everywhere: two pixels in the page's focus colour, clear of the control */
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 h1:focus, h2:focus, h3:focus, .q:focus, #rh-sample:focus { outline: none; }
-h1:focus-visible, h2:focus-visible, h3:focus-visible, .q:focus-visible { outline: 2px dashed var(--neutral); outline-offset: 6px; border-radius: 6px; }
+h1:focus-visible, h2:focus-visible, h3:focus-visible, .q:focus-visible { outline: 2px dashed var(--neutral); outline-offset: 4px; border-radius: 6px; }
+.article .kicker { margin-bottom: 10px; }
 
 /* key hints: quiet until you look for them */
-kbd { font: 600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; background: var(--surface); min-width: 20px; display: inline-block; text-align: center; }
+kbd { font: 600 11px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; background: var(--surface); min-width: 20px; display: inline-block; text-align: center; }
 .btn kbd, .tabs kbd, .chip kbd { margin-left: 6px; opacity: .75; }
 .btn.primary kbd, .tabs [aria-pressed=true] kbd { background: none; color: inherit; border-color: color-mix(in srgb, currentColor 35%, transparent); }
 .label { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--muted); }
@@ -163,7 +164,6 @@ kbd { font: 600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: 
 .tcard:focus-visible { outline-offset: 3px; }
 .tcard .tring { position: relative; width: 76px; height: 76px; }
 .tcard .tring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: var(--c); }
-.tcard .tring em { position: absolute; right: -6px; bottom: -2px; font-style: normal; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
 .tcard .tx { min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 4px; }
 .tcard .n { font-size: var(--fs-xs); font-weight: 700; letter-spacing: var(--tr-tight); text-transform: uppercase; color: var(--muted); }
 .tcard .tt { font-size: var(--fs-lg); font-weight: 650; line-height: 1.25; letter-spacing: -.01em; text-wrap: balance; }
@@ -208,7 +208,7 @@ kbd { font: 600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: 
 /* Concept: the lesson rail, the idea, the picture, then the quiz beside the two lenses */
 .lrail { display: inline-flex; gap: 6px; align-items: center; }
 .lrail button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: none; box-shadow: inset 0 0 0 1.5px var(--line); font-size: var(--fs-sm); font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.lrail button.done { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ok) 60%, transparent); color: var(--ok); }
+.lrail button.ok { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ok) 60%, transparent); color: var(--ok); }
 .lrail button[aria-current] { background: var(--accent); color: var(--on-accent); box-shadow: none; }
 .lrail button:hover { box-shadow: inset 0 0 0 1.5px var(--neutral); }
 .idea { font-size: var(--fs-xl); line-height: 1.25; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
@@ -295,6 +295,7 @@ ol.plan .check { grid-column: 2 / -1; display: flex; gap: 8px; align-items: cent
 .lane:hover, .lane:focus-visible { color: var(--text); }
 .rnode { position: absolute; border: 0; background: var(--surface); border-radius: 14px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 28%, var(--line)), inset 3px 0 0 var(--c), var(--shadow); font-size: var(--fs-md); font-weight: 600; line-height: 1.2; padding: 4px 8px 4px 11px; text-align: center; display: grid; place-content: center; transition: box-shadow .2s ease, transform .2s ease; }
 .rnode:hover, .rnode:focus-visible { transform: translateY(-2px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, var(--line)), inset 3px 0 0 var(--c), 0 14px 26px -14px color-mix(in srgb, var(--c) 70%, transparent); }
+.rnode.long { font-size: var(--fs-sm); line-height: 1.15; }
 .rnode small { display: block; font-weight: 500; font-size: var(--fs-xs); color: var(--muted); }
 .rnode.you { background: color-mix(in srgb, var(--run) 9%, var(--surface)); }
 .rnode.fc { background: var(--bg); box-shadow: inset 3px 0 0 var(--c), var(--shadow); outline: 1.5px dashed color-mix(in srgb, var(--c) 55%, var(--neutral)); outline-offset: -1.5px; }
@@ -331,13 +332,14 @@ button.link { border: 0; background: none; padding: 2px 0; color: var(--info); t
 .sheet.narrow { max-width: 560px; }
 .sheethead { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
 .sheethead h2 { font-size: 20px; letter-spacing: -.01em; }
+.sheethead h2.kicker { font-size: var(--fs-xs); letter-spacing: var(--tr-label); white-space: nowrap; }
 .sheethead .segs { flex: 1; max-width: 260px; }
 .grades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .grades .btn { border-radius: 14px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; justify-items: start; padding: 8px 12px; text-align: left; }
 .grades .btn kbd { margin: 0; grid-row: span 2; }
 .grades .btn small { display: block; color: var(--muted); font-size: var(--fs-xs); grid-column: 2; }
 .grades .btn.primary small { color: inherit; opacity: .75; }
-dl.keys { display: grid; grid-template-columns: 150px 1fr; gap: 9px 14px; margin: 0; font-size: var(--fs-md); align-items: baseline; }
+dl.keys { display: grid; grid-template-columns: 112px 1fr; gap: 9px 14px; margin: 0; font-size: var(--fs-md); align-items: baseline; }
 dl.keys dt { white-space: nowrap; display: flex; gap: 4px; flex-wrap: wrap; } dl.keys dd { margin: 0; color: var(--muted); }
 dl.keys dt.h { grid-column: 1 / -1; margin-top: 10px; font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--muted); } dl.keys dt.h:first-child { margin-top: 0; }
 .keys { margin: 0; font-size: var(--fs-sm); color: var(--muted); line-height: 1.9; }
@@ -406,5 +408,6 @@ fieldset.seg label { display: flex; gap: 8px; align-items: flex-start; min-heigh
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  .layer, .layer.is-cur { transition: none !important; } /* none, not .01ms: a layer must be visible at once, or the keyboard cannot land in it */
   .layer, .layer.is-out, .tcard:hover, .tcard:focus-visible, .rnode:hover, .rnode:focus-visible, .btn.primary:hover { transform: none !important; }
 }
