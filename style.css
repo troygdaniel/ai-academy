@@ -9,7 +9,7 @@
   --t1: rgba(37,99,235,.16); --t2: rgba(219,39,119,.14); --t3: rgba(21,128,61,.16); --t4: rgba(194,87,12,.16); --t5: rgba(124,58,237,.15); --t6: rgba(14,116,144,.16);
   --ring-bg: #e7e5e4;
   /* one hue per track or roles family (agentboard's agent palette); used for rings, tints and bars, never for small text */
-  --a1: #2563eb; --a2: #7c3aed; --a3: #db2777; --a4: #0e7490; --a5: #475569; --a6: #a21caf;
+  --a1: #2563eb; --a2: #7c3aed; --a3: #db2777; --a4: #0e7490; --a5: #475569; --a6: #a21caf; --a7: #4f46e5; --a8: #0f766e; --a9: #9f1239;
   --panel: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.46)); --panel-hi: rgba(255,255,255,.95); --panel-sh: 0 18px 40px -28px rgba(28,25,23,.35);
   --veil: rgba(250,250,249,.86); --tile-sh: .32;
   --focus: var(--info); --run-solid: #a84a08; --on-run: #ffffff;
@@ -27,7 +27,7 @@
     --glow1: rgba(94,231,255,.12); --glow2: rgba(93,255,176,.06); --glow3: rgba(93,255,176,.07); --dot: rgba(110,190,255,.05);
     --t1: rgba(94,160,255,.22); --t2: rgba(255,120,190,.2); --t3: rgba(93,255,176,.2); --t4: rgba(255,154,60,.22); --t5: rgba(170,130,255,.22); --t6: rgba(94,231,255,.2);
     --ring-bg: #1c2a3a;
-    --a1: #60a5fa; --a2: #c084fc; --a3: #f472b6; --a4: #22d3ee; --a5: #94a3b8; --a6: #e879f9;
+    --a1: #60a5fa; --a2: #c084fc; --a3: #f472b6; --a4: #22d3ee; --a5: #94a3b8; --a6: #e879f9; --a7: #818cf8; --a8: #2dd4bf; --a9: #fb7185;
     --panel: linear-gradient(180deg, rgba(14,25,38,.74), rgba(8,15,24,.66)); --panel-hi: rgba(255,255,255,.045); --panel-sh: 0 18px 40px -26px rgba(0,0,0,.9);
     --veil: rgba(7,11,18,.86); --tile-sh: .5; --run-solid: #ff9a3c; --on-run: #070b12;
     color-scheme: dark;
@@ -40,7 +40,7 @@
   --glow1: rgba(94,231,255,.12); --glow2: rgba(93,255,176,.06); --glow3: rgba(93,255,176,.07); --dot: rgba(110,190,255,.05);
   --t1: rgba(94,160,255,.22); --t2: rgba(255,120,190,.2); --t3: rgba(93,255,176,.2); --t4: rgba(255,154,60,.22); --t5: rgba(170,130,255,.22); --t6: rgba(94,231,255,.2);
   --ring-bg: #1c2a3a;
-  --a1: #60a5fa; --a2: #c084fc; --a3: #f472b6; --a4: #22d3ee; --a5: #94a3b8; --a6: #e879f9;
+  --a1: #60a5fa; --a2: #c084fc; --a3: #f472b6; --a4: #22d3ee; --a5: #94a3b8; --a6: #e879f9; --a7: #818cf8; --a8: #2dd4bf; --a9: #fb7185;
   --panel: linear-gradient(180deg, rgba(14,25,38,.74), rgba(8,15,24,.66)); --panel-hi: rgba(255,255,255,.045); --panel-sh: 0 18px 40px -26px rgba(0,0,0,.9);
   --veil: rgba(7,11,18,.86); --tile-sh: .5; --run-solid: #ff9a3c; --on-run: #070b12;
   color-scheme: dark;
@@ -107,10 +107,10 @@ kbd { font: 600 11px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-seri
 #stage { position: relative; flex: 1; min-height: 0; overflow: hidden; overflow: clip; }
 .layer {
   position: absolute; inset: 0; overflow: auto; padding: 22px 24px 110px;
-  opacity: 0; visibility: hidden; pointer-events: none; transform: scale(.94);
+  opacity: 0; visibility: hidden; pointer-events: none; transform: scale(.9); transform-origin: var(--ox, 50%) var(--oy, 40%);
   transition: opacity .34s ease, transform .34s var(--ease), visibility 0s linear .34s;
 }
-.layer.is-out { transform: scale(1.08); }
+.layer.is-out { transform: scale(1.14); }
 .layer.is-cur { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition: opacity .34s ease, transform .34s var(--ease), visibility 0s; }
 .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 .wrap.wide { max-width: 1220px; }
@@ -124,7 +124,7 @@ kbd { font: 600 11px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-seri
 .head.big h1 { font-size: 32px; margin-top: 4px; }
 
 /* rings */
-.ring { display: inline-block; vertical-align: middle; flex: none; }
+.ring { display: inline-block; vertical-align: middle; flex: none; overflow: visible; }
 .ring circle { fill: none; stroke-width: 5; }
 .ring .bg { stroke: var(--ring-bg); }
 .ring .fg { stroke: var(--ok); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .6s ease; }
@@ -156,7 +156,7 @@ kbd { font: 600 11px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-seri
 .leg b { color: var(--text); font-weight: 600; }
 .acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.tcard { --c: var(--a1); position: relative; text-align: left; display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: 16px; row-gap: 12px; align-items: center; align-content: center; padding: 18px 20px 16px; min-height: 142px; border: 0; border-radius: 22px;
+.tcard { --c: var(--a1); position: relative; text-align: left; display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: 16px; row-gap: 12px; align-items: center; align-content: center; padding: 18px 20px 16px; min-height: clamp(142px, calc((100vh - 440px) / 3), 200px); border: 0; border-radius: 22px;
   background: radial-gradient(140% 100% at 0 0, color-mix(in srgb, var(--c) 13%, transparent), transparent 60%), var(--surface);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, var(--line)), 0 18px 40px -22px color-mix(in srgb, var(--c) calc(var(--tile-sh) * 100%), transparent);
   transition: transform .25s var(--ease), box-shadow .25s; }
@@ -406,8 +406,60 @@ fieldset.seg legend { font-size: var(--fs-sm); color: var(--muted); padding: 0 6
 fieldset.seg label { display: flex; gap: 8px; align-items: flex-start; min-height: 28px; } fieldset.seg label input { margin-top: 3px; }
 #tm-card .two { margin-top: 10px; } #tm-card .card { padding: 14px 16px; box-shadow: inset 0 0 0 1px var(--line); }
 
+/* arriving: what is in a layer comes in a beat apart, and its rings draw themselves */
+@keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+@keyframes ringin { from { stroke-dashoffset: 132; } }
+.layer.arrive .tcard, .layer.arrive .node { animation: arrive .45s var(--ease) both; animation-delay: calc(var(--i, 0) * 35ms); }
+.layer.arrive .ring .fg { animation: ringin .9s var(--ease) both; }
+/* the tile your next lesson is in breathes, slowly */
+@keyframes wpulse { 0% { transform: scale(.9); opacity: .5; } 100% { transform: scale(1.22); opacity: 0; } }
+.tcard.next .tring::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--c); opacity: 0; animation: wpulse 2.6s ease-out infinite; }
+/* answering: the right one glows once, a wrong one gives a small shake */
+@keyframes okglow { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); } to { box-shadow: 0 0 0 12px transparent; } }
+@keyframes nudge { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.opts.fresh .opt.right { animation: okglow .8s ease-out; } .opts.fresh .opt.wrong { animation: nudge .28s ease-in-out; }
+.score { position: relative; width: 96px; height: 96px; } .score b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.quiz .score .ring .fg { animation: ringin 1s var(--ease) both; }
+
+/* top bar extras, the toast, the reading bar */
+.chip.icon { padding: 0; width: 32px; justify-content: center; }
+.half { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--text); background: linear-gradient(90deg, var(--text) 50%, transparent 50%); display: block; }
+#toast { position: fixed; left: 50%; top: 66px; z-index: 60; transform: translate(-50%, -14px); opacity: 0; pointer-events: none; padding: 9px 20px; border-radius: 999px; font-weight: 650; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px var(--line), 0 24px 60px -24px rgba(0,0,0,.6); transition: opacity .3s, transform .4s var(--ease); }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#readbar { position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 5; pointer-events: none; } #readbar i { display: block; height: 100%; width: 0; background: var(--info); border-radius: 0 2px 2px 0; }
+#zoombar[data-z="2"] .nav, #zoombar[data-z="3"] .nav { display: none; }
+
+/* Detail: the rail of sections beside the text */
+.reading { display: grid; grid-template-columns: 190px minmax(0, 720px); gap: 44px; justify-content: center; align-items: start; }
+.reading .article { margin: 0; }
+.toc { position: sticky; top: 0; display: grid; gap: 2px; padding-top: 46px; }
+.toc .label { margin-bottom: 8px; padding-left: 12px; }
+.toc button { text-align: left; border: 0; background: none; padding: 5px 12px; border-left: 2px solid var(--line); font-size: var(--fs-md); color: var(--muted); line-height: 1.3; border-radius: 0 8px 8px 0; }
+.toc button:hover { color: var(--text); } .toc button[aria-current] { color: var(--text); border-left-color: var(--text); font-weight: 600; }
+
+/* Find */
+#find { position: fixed; inset: 0; z-index: 40; background: var(--veil); backdrop-filter: blur(8px); overflow: auto; padding: 12vh 24px 34px; }
+.findbox { display: grid; gap: 10px; }
+.findbox input { font-size: var(--fs-lg); padding: 12px 14px; border-radius: 14px; width: 100%; }
+#fd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#fd-list li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 12px; border-radius: 12px; cursor: pointer; }
+#fd-list li.none { display: block; color: var(--muted); cursor: default; }
+#fd-list li[aria-selected="true"] { background: var(--chip); box-shadow: inset 0 0 0 1px var(--neutral); }
+#fd-list .k { font-size: var(--fs-xs); font-weight: 600; letter-spacing: var(--tr-tight); text-transform: uppercase; color: var(--muted); }
+#fd-list .t b { display: block; font-weight: 650; } #fd-list .t small { display: block; color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* pictures: the conversation as a strip, a gauge for the chain */
+.strip { display: flex; gap: 3px; height: 18px; margin: 10px 0 6px; }
+.strip i { min-width: 3px; border-radius: 5px; background: var(--info); position: relative; transition: flex .35s ease, background .2s; }
+.strip i.sys { background: var(--neutral); } .strip i.sum { background: var(--ok); } .strip i.model { opacity: .55; }
+.strip i.out { background: none; box-shadow: inset 0 0 0 1.5px var(--neutral); opacity: 1; }
+.strip i.key::after { content: ""; position: absolute; left: 50%; top: -7px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--run); }
+.donut { --p: 0; display: inline-block; width: 54px; height: 54px; border-radius: 50%; vertical-align: middle; margin-right: 12px; background: conic-gradient(var(--ok) calc(var(--p) * 1%), var(--ring-bg) 0); -webkit-mask: radial-gradient(circle, transparent 17px, #000 18px); mask: radial-gradient(circle, transparent 17px, #000 18px); }
+.widget .leg { margin-bottom: 8px; }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
-  .layer, .layer.is-cur { transition: none !important; } /* none, not .01ms: a layer must be visible at once, or the keyboard cannot land in it */
+  /* transitions are off altogether, not just very short: a .01ms transition on an inherited property (visibility) still leaves a layer hidden for a frame, and the keyboard cannot land in it */
+  *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   .layer, .layer.is-out, .tcard:hover, .tcard:focus-visible, .rnode:hover, .rnode:focus-visible, .btn.primary:hover { transform: none !important; }
+  .tcard.next .tring::after { display: none; }
 }

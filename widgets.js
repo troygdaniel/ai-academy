@@ -67,7 +67,7 @@ var WIDGETS = {};
     root.innerHTML = '<div class="ctl"><label for="cx-win">Window size <b id="cx-winv"></b></label><input type="range" id="cx-win" min="50" max="260" step="10">' +
       '<label for="cx-turns">Chat length <b id="cx-turnsv"></b></label><input type="range" id="cx-turns" min="0" max="' + C.filler.length + '" step="1">' +
       '<label class="check"><input type="checkbox" id="cx-sum"> Summarise the old turns instead of dropping them</label></div>' +
-      '<div class="meter" id="cx-meter"><i></i></div><p class="note" id="cx-used"></p><div class="chat" id="cx-chat" aria-live="polite"></div><p class="verdict" id="cx-verdict" role="status"></p>';
+      '<div class="meter" id="cx-meter"><i></i></div><p class="note" id="cx-used"></p><div class="strip" id="cx-strip" aria-hidden="true"></div><div class="leg" aria-hidden="true"><u style="--k:var(--info)">in the window</u><u>fell out</u><u style="--k:var(--run)">the codename</u></div><div class="chat" id="cx-chat" aria-live="polite"></div><p class="verdict" id="cx-verdict" role="status"></p>';
     function update() {
       // the conversation so far: the fact, some chatter, then the question
       var msgs = [{ who: 'you', text: C.fact, key: true }].concat(C.filler.slice(0, st.turns)).concat([{ who: 'you', text: C.ask }]);
@@ -88,6 +88,9 @@ var WIDGETS = {};
         h += '<div class="msg ' + m.who + (keep[k] ? '' : ' out') + '"><span class="who">' + (m.who === 'you' ? 'You' : 'Model') + (keep[k] ? '' : ' · fell out of the window') + '</span>' + esc(m.text) + '<small>' + cost(m.text) + ' tokens</small></div>';
       });
       $('#cx-chat', root).innerHTML = h;
+      // the same conversation as one strip: a block per message, as wide as its tokens; what fell out of the window is hollow
+      $('#cx-strip', root).innerHTML = '<i class="sys" style="flex:' + cost(C.system) + '"></i>' + (sumIn ? '<i class="sum" style="flex:' + cost(C.summary) + '"></i>' : '') +
+        msgs.map(function (m, k) { return '<i class="' + m.who + (keep[k] ? '' : ' out') + (m.key ? ' key' : '') + '" style="flex:' + cost(m.text) + '"></i>'; }).join('');
       var sees = keep[0] || sumIn;
       $('#cx-verdict', root).className = 'verdict ' + (sees ? 'ok' : 'bad');
       $('#cx-verdict', root).textContent = sees ? (keep[0] ? 'The codename is still in the window, so the model can answer: ' + C.answer + '.' : 'The original turn is gone, but the summary kept the codename, so the model can answer: ' + C.answer + '.')
@@ -495,7 +498,7 @@ var WIDGETS = {};
     function byId(id) { return L.steps.filter(function (s) { return s.id === id; })[0]; }
     function problems(order) { var out = []; order.forEach(function (id, i) { byId(id).needs.forEach(function (n) { if (order.indexOf(n) > i) out.push('"' + byId(id).text + '" comes before "' + byId(n).text + '", which it needs.'); }); }); return out; }
     WIDGETS._planProblems = function (order) { return problems(order).length; };
-    root.innerHTML = '<p class="prompt" style="font-size:16px">Goal: ' + esc(L.goal) + '</p><ol class="plan" id="pl-list"></ol><p class="verdict" id="pl-order" role="status"></p><p class="verdict" id="pl-gate" role="status"></p>';
+    root.innerHTML = '<p class="prompt" style="font-size:16px">Goal: ' + esc(L.goal) + '</p><ol class="plan" id="pl-list"></ol><p class="note" aria-hidden="true"><kbd>Alt</kbd> + <kbd>↑</kbd> <kbd>↓</kbd> moves the step in focus</p><p class="verdict" id="pl-order" role="status"></p><p class="verdict" id="pl-gate" role="status"></p>';
     function update() {
       var n = st.order.length;
       $('#pl-list', root).innerHTML = st.order.map(function (id, i) {
@@ -512,6 +515,15 @@ var WIDGETS = {};
           : (L.okNote || 'A person approves the deploy, and the steps that can be undone are left to flow.');
     }
     root.addEventListener('change', function (e) { var id = e.target.dataset.gate; if (id) { st.gate[id] = e.target.checked; update(); $('[data-gate="' + id + '"]', root).focus(); } });
+    root.addEventListener('keydown', function (e) { // Alt + up or down moves the step you are on, from any of its controls
+      if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+      var li = e.target.closest ? e.target.closest('#pl-list li') : null; if (!li) return;
+      e.preventDefault();
+      var i = $$('#pl-list li', root).indexOf(li), j = i + (e.key === 'ArrowUp' ? -1 : 1), kind = e.target.dataset.gate !== undefined ? 'gate' : e.target.dataset.up !== undefined ? 'up' : 'down';
+      if (j < 0 || j >= st.order.length) return;
+      var t = st.order[i]; st.order[i] = st.order[j]; st.order[j] = t; update();
+      var b = kind === 'gate' ? $('[data-gate="' + t + '"]', root) : $('[data-' + kind + '="' + j + '"]', root); if (b.disabled) b = $('[data-' + (kind === 'up' ? 'down' : 'up') + '="' + j + '"]', root); b.focus();
+    });
     onClick(root, function (d) {
       var i = d.up !== undefined ? +d.up : d.down !== undefined ? +d.down : -1, j = d.up !== undefined ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= st.order.length) return;
       var t = st.order[i]; st.order[i] = st.order[j]; st.order[j] = t; update();
@@ -574,7 +586,7 @@ var WIDGETS = {};
     function update() {
       var all = chain(st.p / 100, st.n, st.check), pct = all * 100, good = Math.round(pct), h = '';
       $('#ch-pv', root).textContent = st.p + ' times in 100'; $('#ch-nv', root).textContent = String(st.n);
-      $('#ch-out', root).innerHTML = '<b>' + (pct >= 99.95 ? '99.9' : pct.toFixed(pct < 10 ? 1 : 0)) + '%</b> of runs get every step right';
+      $('#ch-out', root).innerHTML = '<span class="donut" style="--p:' + pct.toFixed(1) + '" aria-hidden="true"></span><b>' + (pct >= 99.95 ? '99.9' : pct.toFixed(pct < 10 ? 1 : 0)) + '%</b> of runs get every step right';
       for (var i = 0; i < 100; i++) h += '<i class="' + (i < good ? 'ok' : 'bad') + '"></i>';
       $('#ch-dots', root).innerHTML = h;
       $('#ch-note', root).textContent = 'Out of 100 runs, about ' + good + ' finish with nothing wrong and about ' + (100 - good) + ' carry at least one mistake.' + (st.check ? ' With a check and one retry, a step only fails if it goes wrong twice in a row.' : st.n >= 10 && pct < 70 ? ' Each step looked dependable on its own. The length of the chain did this.' : '');
