@@ -24,7 +24,6 @@ const D = (page, fn, arg) => page.evaluate(fn, arg);
 const goLesson = (page, t, c) => page.evaluate(([t, c]) => { const s = ACADEMY_DEBUG.state(); s.pos.space = 'learn'; ACADEMY_DEBUG.go(2, t, c); }, [t, c]);
 const text = (page, sel) => page.locator(sel).innerText();
 const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
-const noSideScroll = (page) => page.evaluate(() => { const l = document.querySelector('.layer.is-cur'); const sheet = [...document.querySelectorAll('#review, #sandbox')].find(x => !x.hidden); const el = sheet || l; return document.documentElement.scrollWidth <= innerWidth && el.scrollWidth <= el.clientWidth + 1; });
 
 (async () => {
   const browser = await chromium.launch();
@@ -448,40 +447,32 @@ const noSideScroll = (page) => page.evaluate(() => { const l = document.querySel
   eq(page.net, [], 'the page asked for nothing over the network');
   await page.close();
 
-  // ------------------------------------------------------------------ phone width
-  section('Phone width (360 px): nothing scrolls sideways');
-  page = await open(browser, { viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
-  ok(await noSideScroll(page), 'map');
-  ok(await D(page, () => { const z = document.querySelector('#zoombar').getBoundingClientRect(); return z.left >= 0 && z.right <= innerWidth; }), 'the zoom bar fits on screen');
-  await D(page, () => ACADEMY_DEBUG.go(1, 'models')); ok(await noSideScroll(page), 'track');
+  // ------------------------------------------------------------------ every lesson opens
+  section('Every lesson opens and runs without errors (desktop)');
+  page = await open(browser);
+  await D(page, () => ACADEMY_DEBUG.go(1, 'models'));
   for (const [t, c] of [['models', 'tokens'], ['models', 'context'], ['models', 'nexttoken'], ['models', 'training'], ['models', 'wrong'], ['prompting', 'parts'], ['prompting', 'examples'], ['prompting', 'roles'], ['prompting', 'format'], ['prompting', 'iterate'], ['prompting', 'judge'], ['agents', 'tooluse'], ['agents', 'loop'], ['agents', 'planning'], ['agents', 'memory'], ['agents', 'agentfail'], ['agile', 'aidlc'], ['agile', 'aigates'], ['agile', 'aiphases'], ['agile', 'airollout'], ['agile', 'aievidence'], ['agile', 'airehearse']]) {
     await goLesson(page, t, c);
     if (c === 'aiphases') await page.locator('#widget [data-card="i2"][data-b="ai"]').check();
     if (c === 'aievidence') await page.locator('#widget [data-claim="e2"][data-v="said"]').check();
-    if (c === 'airehearse') { await page.fill('#rh-in', 'A sentence of my own, long enough to unlock the sample answer.'); await page.locator('#rh-show').tap(); }
+    if (c === 'airehearse') { await page.fill('#rh-in', 'A sentence of my own, long enough to unlock the sample answer.'); await page.locator('#rh-show').click(); }
     if (c === 'training') await page.click('#widget [data-a="train"]');
     if (c === 'format') await page.click('#widget [data-f="2"]');
     if (c === 'judge') await page.click('#widget [data-ex="3"]');
     if (c === 'loop') await page.click('#widget [data-a="run"]');
     if (c === 'memory') { await page.check('#widget [data-save="secret"]'); await page.click('#widget [data-a="new"]'); await page.click('#widget [data-ask="secret"]'); }
-    ok(await noSideScroll(page), 'lesson: ' + c);
-    await page.locator('#quiz [data-opt="0"]').tap(); ok(await noSideScroll(page), 'lesson quiz answered: ' + c);
+    ok(await page.locator('#widget').isVisible() && await page.locator('#quiz').isVisible(), 'lesson draws its picture and quiz: ' + c);
+    await page.locator('#quiz [data-opt="0"]').click();
   }
-  await D(page, () => ACADEMY_DEBUG.go(3)); ok(await noSideScroll(page), 'read more');
-  ok(await D(page, () => [...document.querySelectorAll('.layer.is-cur button, #bar button, #zoombar button')].filter(b => b.offsetParent).every(b => { const r = b.getBoundingClientRect(); return r.height >= 24 && r.width >= 24; })), 'buttons are at least 24 px in each direction');
+  await D(page, () => ACADEMY_DEBUG.go(3)); ok(await page.locator('.layer.is-cur').isVisible(), 'read more opens');
   await D(page, () => { const s = ACADEMY_DEBUG.state(); s.pos.space = 'roles'; ACADEMY_DEBUG.go(0); });
-  ok(await noSideScroll(page), 'roles tree (the tree scrolls inside its own box)');
-  ok(await D(page, () => { const b = document.querySelector('.treebox'); return b.scrollWidth > b.clientWidth; }), 'the tree box itself can be swiped sideways');
-  await page.locator('#L0 [data-role="context"]').tap(); ok(await noSideScroll(page), 'a role');
-  await D(page, () => ACADEMY_DEBUG.go(3)); ok(await noSideScroll(page), 'a role, read more');
-  await D(page, () => ACADEMY_DEBUG.go(1)); ok(await noSideScroll(page), 'a roles family');
-  await page.locator('#c-review').tap(); ok(await page.locator('#review').isVisible() && await noSideScroll(page), 'review sheet');
-  await page.locator('#review [data-r="close"]').tap();
-  await page.locator('#c-menu').tap();
-  ok(await D(page, () => { const m = document.querySelector('#menu').getBoundingClientRect(); return m.left >= 0 && m.right <= innerWidth; }), 'the menu fits on screen');
-  await page.locator('#menu [data-m="sandbox"]').tap(); await page.locator('#sandbox [data-ex="3"]').tap();
-  ok(await page.locator('#sandbox #sb-alarm').isVisible() && await noSideScroll(page), 'sandbox sheet with warnings');
-  eq(page.errors, [], 'no script errors on the phone run');
+  await page.locator('#L0 [data-role="context"]').click(); await D(page, () => ACADEMY_DEBUG.go(3)); await D(page, () => ACADEMY_DEBUG.go(1));
+  ok(await page.locator('.layer.is-cur').isVisible(), 'a role, its read more and its family open');
+  await page.locator('#c-review').click(); ok(await page.locator('#review').isVisible(), 'the review sheet opens');
+  await page.locator('#review [data-r="close"]').click();
+  await page.locator('#c-menu').click(); await page.locator('#menu [data-m="sandbox"]').click(); await page.locator('#sandbox [data-ex="3"]').click();
+  ok(await page.locator('#sandbox #sb-alarm').isVisible(), 'the sandbox sheet shows its warnings');
+  eq(page.errors, [], 'no script errors across every lesson, role and sheet');
   await page.close();
 
   // ------------------------------------------------------------------ light and dark

@@ -14,7 +14,7 @@ Read `PLAN.md` first (one page). Facts and what is checked: `content/SOURCES.md`
 - **Prompt sandbox** (Menu, the Map, or the `S` key): scores a prompt against a six-part rubric and warns when text looks like real data (emails, long digit runs, names). It never calls a model. The prompt is not saved; the names you list for it to watch for are kept in this browser only, and left out of the Save file.
 - **Roles family tree** (the switch at the top of the Map, or the `T` key): our own tree of AI-era roles, with the same zoom (Tree, Family, Role, Detail), a Read more for each role, and quiz cards. Inspired by Ian Miell's family tree of software job titles; none of his data is used.
 - **Spaced review** (SM-2): every quiz question becomes a card; Review runs the due ones.
-- Streak, daily goal ring (minutes you actually study), XP and levels. Light and dark. Keyboard throughout, phone width, reduced motion respected.
+- Streak, daily goal ring (minutes you actually study), XP and levels. Light and dark. Keyboard throughout, reduced motion respected. Built for desktop; phone width is not a goal.
 
 ## Keys
 `-` `+` zoom · `1` to `4` answer · `Enter` next · `R` review · `M` map · `T` roles tree · `S` sandbox · `Esc` close. In a review, after a right answer: `1` Hard, `2` Good, `3` Easy.
@@ -38,7 +38,7 @@ The app needs nothing installed. The checks need Node and Playwright:
 node tests/run.js
 ```
 
-It opens `index.html` from disk in headless Chromium and checks behaviour, every lesson's picture, the sandbox, SM-2 intervals, Save / Load (including a file from the first prototype), phone width (360 px), light and dark contrast, reduced motion, keyboard use, and that the page asks for nothing over the network.
+It opens `index.html` from disk in headless Chromium and checks behaviour, every lesson's picture, the sandbox, SM-2 intervals, Save / Load (including a file from the first prototype), that every lesson opens without errors, light and dark contrast, reduced motion, keyboard use, and that the page asks for nothing over the network.
 
 ## Adding a lesson
 Add a concept to a track in `content.js`, add a lesson under `lessons` with the same id, and name a widget from `widgets.js` (or write one: a function that draws into the element it is given). Give every factual claim a row in `content/SOURCES.md`, and mark what you could not check as **verify**.
