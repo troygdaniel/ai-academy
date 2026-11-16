@@ -253,7 +253,7 @@
     var cid = S.pos.concept; if (S.pos.space !== 'learn' || S.pos.zoom !== 2 || !cid || S.played[cid]) return;
     S.played[cid] = true; save(); renderSteps(cid); burst($('#toy-state'), 'var(--ok)', 8);
   }
-  ['input', 'change', 'click'].forEach(function (ev) { $('#L2').addEventListener(ev, function (e) { if (e.target.closest && e.target.closest('#widget') && (ev !== 'click' || e.target.closest('button, input, label'))) markPlayed(); }); });
+  ['input', 'change', 'click'].forEach(function (ev) { $('#L2').addEventListener(ev, function (e) { if (e.target.closest && e.target.closest('#widget') && (ev !== 'click' || e.target.closest('button, input, label'))) markPlayed(); }, true); }); // capture: a toy may redraw the button you pressed before the click gets here
 
   // ---------- small celebrations: a burst of dots, a number that floats up. Skipped when reduced motion is on. ----------
   var calm = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };

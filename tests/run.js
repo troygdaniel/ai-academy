@@ -1321,6 +1321,8 @@ ok((await page.locator('#rt-verdict').getAttribute('class')).includes('bad') && 
   await page.waitForTimeout(1300); await page.locator('#quiz [data-act="replay"]').click(); await page.keyboard.press(String(tk[0] + 1));
   await page.waitForTimeout(50);
   ok(await page.locator('.burst').count() >= 1 && await page.locator('.xpfly').count() === 0, 'on a replay a right answer still bursts, but no XP floats, because none is earned');
+  await goLesson(page, 'prompting', 'roles'); await page.click('#widget [data-v="2"]');
+  eq([await text(page, '#toy-state'), (await steps())[0]], ['✓ played', '+Play'], 'pressing a button in a toy ticks Play too, even when the toy redraws that button');
   await page.reload();
   eq(await D(page, () => [ACADEMY_DEBUG.state().played.context, ACADEMY_DEBUG.state().readm.context]), [true, true], 'the steps survive a reload');
   eq(await D(page, () => { const s = ACADEMY_DEBUG.adopt({ v: 1, cards: {}, days: {} }); return [typeof s.played, typeof s.readm]; }), ['object', 'object'], 'an older save file without the steps still loads');
