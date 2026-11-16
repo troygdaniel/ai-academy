@@ -519,7 +519,7 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   section('Keyboard only');
   await page.keyboard.press('Tab');
   const seen = []; for (let i = 0; i < 12; i++) { seen.push(await D(page, () => { const a = document.activeElement; return a.id || a.dataset.space || a.dataset.act || a.dataset.track || a.tagName; })); await page.keyboard.press('Tab'); }
-  ok(seen.includes('c-review') && seen.includes('c-menu') && seen.includes('roles') && seen.includes('continue') && seen.includes('models'), 'Tab reaches the top bar, the map switch, Continue and the tracks, in order', seen.join(' '));
+  ok(seen.includes('c-review') && seen.includes('c-menu') && seen.includes('learn') && seen.includes('continue') && seen.includes('models'), 'Tab reaches the top bar, the map switch, Continue and the tracks, in order', seen.join(' '));
   ok(await D(page, () => { const a = document.activeElement, s = getComputedStyle(a); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2; }), 'the focused control has a visible outline');
   await page.focus('#c-menu'); await page.keyboard.press('Enter');
   ok(await page.locator('#menu').isVisible() && await D(page, () => document.querySelector('#menu').contains(document.activeElement)), 'Enter on Menu opens it and moves focus inside');
@@ -539,6 +539,155 @@ const setRange = (page, sel, v) => page.locator(sel).evaluate((el, v) => { el.va
   eq(page.errors, [], 'no script errors on the keyboard run');
   eq(page.net, [], 'still nothing over the network');
   await page.close();
+
+  // ------------------------------------------------------------------ keyboard: arrows, roving tabindex, Esc, ?, focus
+  section('Keyboard: arrows, one tab stop per list, Esc goes up, the keys sheet');
+  page = await open(browser);
+  const at = () => D(page, () => { const a = document.activeElement, d = a.dataset || {}; return d.track || d.concept || d.role || d.fam || d.z || d.opt || d.ropt || d.g || d.m || d.filter || d.space || d.act || a.id || a.tagName; });
+  const zoom = () => D(page, () => ACADEMY_DEBUG.state().pos.zoom);
+  const press = async (...keys) => { for (const k of keys) await page.keyboard.press(k); };
+  eq(await D(page, () => [...document.querySelectorAll('#L0 .tcard')].filter(b => b.tabIndex === 0).map(b => b.dataset.track)), ['models'], 'the Map is one tab stop: only the track you are at can be tabbed to');
+  eq(await D(page, () => ['.tabs', '.acts', '#z-stops'].map(g => [...document.querySelectorAll(g + ' button')].filter(b => b.tabIndex === 0).length)), [1, 1, 1], 'the map switch, the action row and the zoom stops are one tab stop each');
+  let stops = 0; await page.keyboard.press('Tab'); while (await at() !== 'z-keys' && stops < 30) { stops++; await page.keyboard.press('Tab'); }
+  ok(stops <= 8, 'Tab crosses the whole Map in a few stops, not one per tile', stops + ' stops');
+  await page.keyboard.press('m');
+  eq(await at(), 'models', 'M lands the keyboard on the track you are at');
+  await press('ArrowRight'); const k1 = await at(); await press('ArrowDown'); const k2 = await at(); await press('ArrowLeft'); const k3 = await at(); await press('ArrowUp');
+  eq([k1, k2, k3, await at()], ['prompting', 'evals', 'grounding', 'models'], 'arrow keys walk the 3 by 3 map in all four directions');
+  await press('End'); const kEnd = await at(); await press('Home');
+  eq([kEnd, await at()], ['agile', 'models'], 'End and Home jump to the last and first track');
+  await press('ArrowLeft'); eq([await at(), await zoom()], ['models', 0], 'an arrow at the edge stays put');
+  await press('Enter');
+  eq([await zoom(), await at()], [1, 'tokens'], 'Enter opens the track and lands on its current lesson');
+  eq(await D(page, () => document.activeElement.classList.contains('node')), true, 'focus is on the lesson in the path, not on a heading');
+  await press('ArrowDown', 'ArrowDown'); eq(await at(), 'nexttoken', 'arrow keys move between lessons');
+  await press('ArrowUp', 'Enter');
+  eq([await zoom(), await D(page, () => ACADEMY_DEBUG.state().pos.concept), await at()], [2, 'context', 'H1'], 'Enter opens the lesson and focus lands on its heading');
+  await press('Escape');
+  eq([await zoom(), await at()], [1, 'context'], 'Esc goes up one level and focus returns to the lesson you were in');
+  await press('Escape');
+  eq([await zoom(), await at()], [0, 'models'], 'Esc again goes up to the Map, on the track you were in');
+  await press('Escape'); eq(await zoom(), 0, 'Esc on the Map does nothing');
+  await press('Enter'); eq([await zoom(), await at()], [1, 'context'], 'coming back into the same track keeps your lesson');
+
+  await page.focus('#z-stops [data-z="1"]'); await press('ArrowRight', 'ArrowRight');
+  eq([await at(), await zoom()], ['3', 1], 'arrow keys move along the zoom stops without zooming');
+  await press('Enter'); eq([await zoom(), await at()], [3, 'H1'], 'Enter on a zoom stop goes there');
+  await press('Escape', 'Escape'); eq(await zoom(), 1, 'Esc steps back out through Concept to Track');
+  ok(await page.locator('#zoombar kbd').count() >= 5 && /Esc/.test(await text(page, '#zoombar')) && await page.locator('#c-review kbd').count() === 1, 'the zoom bar and the Review button show their keys');
+  await press('m'); ok(/C/.test(await text(page, '#L0 [data-act="continue"] kbd')) && /M/.test(await text(page, '#L0 [data-space="learn"] kbd')), 'buttons on the Map show their keys');
+  eq(await D(page, () => document.querySelector('#L0 [data-act="continue"]').getAttribute('aria-keyshortcuts')), 'C', 'and say so to a screen reader, while the hint itself is hidden from it');
+  await press('c'); eq([await zoom(), await D(page, () => ACADEMY_DEBUG.state().pos.concept)], [2, 'tokens'], 'C continues with the next lesson');
+
+  // the lesson rail and the quiz options
+  await page.focus('#lrail [aria-current]'); await press('ArrowRight'); eq(await at(), 'context', 'the lesson rail: arrows move between the lessons of the track');
+  await press('ArrowLeft');
+  await page.focus('#quiz .q'); await press('ArrowDown'); eq(await at(), '0', 'from the question, an arrow steps into the answers');
+  await press('ArrowDown', 'ArrowDown'); eq(await at(), '2', 'arrow keys move between the answers');
+  eq(await D(page, () => [...document.querySelectorAll('#quiz .opt')].filter(b => b.tabIndex === 0).length), 1, 'the answers are one tab stop');
+  await press('Enter');
+  ok(await D(page, () => document.querySelector('#quiz .opt[data-opt="2"]').classList.contains('right') || document.querySelector('#quiz .opt[data-opt="2"]').classList.contains('wrong')), 'Enter picks the answer that has focus');
+  eq(await at(), 'next', 'and focus moves on to Next question');
+
+  // typing is never interrupted
+  await page.focus('#tk-in'); await page.keyboard.type('?mtrsc'); await press('ArrowLeft', 'ArrowUp', 'Escape');
+  eq([await zoom(), await at(), await page.locator('#keys').isHidden(), await D(page, () => document.querySelector('#tk-in').value.endsWith('?mtrsc')), await D(page, () => ACADEMY_DEBUG.state().pos.space)], [2, 'tk-in', true, true, 'learn'], 'in a text box, letters, ?, arrows and Esc belong to the text box');
+
+  // checkboxes in a set are one stop
+  await goLesson(page, 'prompting', 'parts');
+  eq(await D(page, () => [...document.querySelectorAll('#pt-toggles input')].filter(b => b.tabIndex === 0).length), 1, 'a set of checkboxes is one tab stop');
+  await page.focus('#pt-toggles [data-part="role"]'); await press('ArrowRight', 'Space');
+  eq(await D(page, () => [document.activeElement.dataset.part, document.activeElement.checked]), ['task', false], 'arrows move along the checkboxes, Space switches the one in focus, and focus stays on it');
+  await goLesson(page, 'agents', 'planning');
+  await page.focus('#pl-list [data-down="0"]'); await press('ArrowDown');
+  eq(await D(page, () => Object.keys(document.activeElement.dataset)[0] + document.activeElement.dataset.down), 'down1', 'in the plan, the down arrow goes to the same button on the next step');
+
+  // the keys sheet
+  await D(page, () => document.activeElement.blur()); await page.keyboard.press('?');
+  ok(await page.locator('#keys').isVisible() && await D(page, () => document.querySelector('#keys').contains(document.activeElement)), 'the ? key opens the keys sheet with focus inside');
+  ok(await D(page, () => document.querySelector('#stage').inert && document.querySelector('#zoombar').inert), 'the page behind the keys sheet is inert');
+  ok((await page.locator('#keys dt:not(.h)').count()) >= 14 && /Hard, Good, Easy/.test(await text(page, '#keys')), 'it lists every shortcut');
+  await press('Tab', 'Tab'); ok(await D(page, () => document.querySelector('#keys').contains(document.activeElement)), 'Tab stays inside the keys sheet');
+  await press('m'); eq([await page.locator('#keys').isVisible(), await zoom()], [true, 2], 'other shortcuts are off while it is open');
+  await press('Escape'); ok(await page.locator('#keys').isHidden(), 'Esc closes it');
+  await page.focus('#z-keys'); await press('Enter'); ok(await page.locator('#keys').isVisible(), 'the keys button in the zoom bar opens it too');
+  await page.keyboard.press('?'); eq([await page.locator('#keys').isHidden(), await at()], [true, 'z-keys'], '? closes it again and focus returns to the button that opened it');
+
+  // dialogs trap focus and give it back
+  await D(page, () => { const S = ACADEMY_DEBUG.state(), t = ACADEMY_DEBUG.dayNow(); ACADEMY.lessons.tokens.quiz.forEach(q => { S.cards[q.id] = { ef: 2.5, rep: 1, int: 1, due: t, n: 1 }; }); S.pos.space = 'learn'; ACADEMY_DEBUG.go(0); });
+  await page.focus('#L0 [data-act="review"]'); await press('Enter');
+  ok(await page.locator('#review').isVisible(), 'Enter on Review opens the review');
+  const inReview = () => D(page, () => document.querySelector('#review').contains(document.activeElement));
+  let trapped = true; for (let i = 0; i < 6; i++) { await page.keyboard.press('Tab'); trapped = trapped && await inReview(); }
+  for (let i = 0; i < 4; i++) { await page.keyboard.press('Shift+Tab'); trapped = trapped && await inReview(); }
+  ok(trapped, 'Tab and Shift+Tab go round inside the review and never leave it');
+  await page.focus('#review [data-r="close"]'); await press('ArrowDown'); eq(await at(), '0', 'in a review, an arrow steps into the answers');
+  const ra = await D(page, () => { const id = ACADEMY_DEBUG.dueIds()[0]; return ACADEMY.lessons.tokens.quiz.find(q => q.id === id).a; });
+  for (let i = 0; i < ra; i++) await press('ArrowDown');
+  await press('Enter');
+  eq(await at(), '4', 'after a right answer focus lands on Good');
+  await press('ArrowLeft'); const g1 = await at(); await press('ArrowRight', 'ArrowRight'); eq([g1, await at()], ['3', '5'], 'arrow keys move between Hard, Good and Easy');
+  ok(await page.locator('#review .grades kbd').count() === 3 && /Esc/.test(await text(page, '#review [data-r="close"]')), 'the grade buttons and Close show their keys');
+  await press('Enter'); ok(/card 2 of/i.test(await text(page, '#review')), 'Enter on a grade moves to the next card');
+  await press('Escape');
+  eq([await page.locator('#review').isHidden(), await at()], [true, 'review'], 'Esc closes the review and focus returns to the Review button on the Map, even though the Map was redrawn');
+  await press('s');
+  const inSb = () => D(page, () => document.querySelector('#sandbox').contains(document.activeElement));
+  let sbTrap = true; for (let i = 0; i < 7; i++) { await page.keyboard.press('Tab'); sbTrap = sbTrap && await inSb(); }
+  ok(sbTrap, 'Tab goes round inside the sandbox');
+  await page.focus('#sb-text'); await page.keyboard.type('a ? b'); ok(await page.locator('#keys').isHidden() && (await page.inputValue('#sb-text')).endsWith('a ? b'), 'typing ? in the sandbox types a question mark');
+  await page.focus('#sandbox [data-ex="0"]'); await press('ArrowRight'); eq(await D(page, () => document.activeElement.dataset.ex), '1', 'the example chips are one row to walk with the arrows');
+  ok(await page.locator('#sb-segs i').count() === 6, 'the rubric score is also drawn as six cells');
+  await press('Escape'); eq([await page.locator('#sandbox').isHidden(), await at()], [true, 'review'], 'Esc closes the sandbox and focus goes back to where it was');
+
+  // the menu
+  await page.focus('#c-menu'); await press('Enter'); eq(await at(), 'map', 'the Menu opens on its first button');
+  await press('ArrowRight'); const m1 = await at(); await press('ArrowDown'); const m2 = await at(); await press('ArrowDown'); eq([m1, m2, await at()], ['roles', 'sandbox', 'theme'], 'arrow keys move around the Menu');
+  await page.focus('#menu input[name="m-goal"][value="10"]'); await press('ArrowRight');
+  eq(await D(page, () => ACADEMY_DEBUG.state().goal), 20, 'the daily goal is a set of radio buttons: an arrow changes it');
+  ok(/\/ 20 min/.test(await text(page, '#c-goal')) && await page.locator('#menu').isVisible(), 'the goal chip follows and the Menu stays open');
+  await page.focus('#menu [data-m="keys"]'); await press('Tab');
+  ok(await page.locator('#menu').isHidden(), 'tabbing out of the Menu closes it');
+  await page.focus('#c-menu'); await press('Enter'); await page.focus('#menu [data-m="keys"]'); await press('Enter');
+  ok(await page.locator('#keys').isVisible(), 'the Menu opens the keys sheet');
+  await press('Escape'); eq(await at(), 'c-menu', 'and closing it returns focus to the Menu button');
+
+  // the roles tree
+  await press('t');
+  ok(await D(page, () => document.querySelector('.tree').contains(document.activeElement)), 'T lands the keyboard in the tree');
+  await page.focus('#L0 [data-role="pm"]'); await press('ArrowDown'); const t1 = await at(); await press('ArrowRight'); const t2 = await at(); await press('ArrowDown', 'ArrowRight'); const t3 = await at(); await press('ArrowUp'); const t4 = await at();
+  eq([t1, t2, t3, t4], ['sm', 'sre', 'ds', 'analyst'], 'arrow keys walk the tree: down a family, across to the next one, and up');
+  ok(/Analyst and statistician/.test(await text(page, '#peek')) && await page.locator('#L0 .tree path.hot').count() >= 1, 'the side panel follows the role in focus and its arrows light up');
+  await press('ArrowUp'); eq(await at(), 'data', 'up from the top role reaches the family heading');
+  eq(await D(page, () => [...document.querySelectorAll('#L0 .tree button')].filter(b => b.tabIndex === 0).length), 1, 'the whole tree is one tab stop');
+  await press('ArrowDown', 'Enter'); eq([await zoom(), await D(page, () => ACADEMY_DEBUG.state().pos.role)], [2, 'analyst'], 'Enter opens the role');
+  await press('Escape'); eq([await zoom(), await at()], [1, 'analyst'], 'Esc goes up to the family, on that role');
+  await press('Escape'); eq([await zoom(), await at()], [0, 'analyst'], 'and up again to the tree, on that role');
+  await page.focus('#L0 [data-filter=""]'); await press('ArrowRight', 'Enter');
+  eq([await at(), await page.locator('#L0 .rnode.dim').count()], ['delivery', 12], 'the family filter: arrows move, Enter picks, focus stays');
+  await page.focus('#L0 [data-space="roles"]'); await press('ArrowLeft', 'Enter');
+  eq([await D(page, () => ACADEMY_DEBUG.state().pos.space), await at()], ['learn', 'learn'], 'the map switch: arrow and Enter flip the map, and focus stays on the switch');
+  eq(page.errors, [], 'no script errors on the new keyboard run');
+  eq(page.net, [], 'and nothing over the network');
+  await page.close();
+
+  page = await open(browser, { reducedMotion: 'reduce' });
+  await page.keyboard.press('m'); await page.keyboard.press('Enter');
+  eq(await D(page, () => [ACADEMY_DEBUG.state().pos.zoom, document.activeElement.dataset.concept]), [1, 'tokens'], 'with reduced motion on, focus still lands after a zoom (the layer shows at once)');
+  await page.close();
+  for (const scheme of ['light', 'dark']) {
+    page = await open(browser, { colorScheme: scheme });
+    await page.keyboard.press('m');
+    const ringC = await D(page, () => {
+      const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+      const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const s = getComputedStyle(document.activeElement), probe = document.createElement('div'); document.body.appendChild(probe);
+      const col = v => { probe.style.color = 'var(' + v + ')'; return getComputedStyle(probe).color; };
+      const out = { w: parseFloat(s.outlineWidth), ring: +cr(s.outlineColor, getComputedStyle(document.body).backgroundColor).toFixed(2), badge: +cr(col('--on-run'), col('--run-solid')).toFixed(2), on: document.activeElement.matches(':focus-visible') }; probe.remove(); return out;
+    });
+    ok(ringC.on && ringC.w >= 2 && ringC.ring >= 3 && ringC.badge >= 4.5, scheme + ': the focus ring is 2px with at least 3:1 against the page, and the due badge has 4.5:1', JSON.stringify(ringC));
+    await page.close();
+  }
 
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

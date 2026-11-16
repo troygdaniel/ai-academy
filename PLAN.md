@@ -37,7 +37,7 @@ A prompt workbench that never calls a model: it scores a prompt against a rubric
 Local only; progress in your browser's storage plus Save/Load to a file; no company or client data in any content; no accounts, no spend, no push. Facts carry a source in `content/SOURCES.md`; anything unchecked is marked **verify**.
 
 ## Look
-Agentboard's: the same tokens, light and dark, cards, rings, calm motion (reduced-motion respected). System fonts, so it works offline.
+Agentboard's, after its Watch view: the same tokens, light and dark, tinted tiles with rings, bars cut into cells, pill switches, calm motion (reduced-motion respected). Little text on the Map and the tree; the data is drawn. Driven from the keyboard: arrows inside a list, one tab stop per list, Esc up a level, `?` for the keys. System fonts, so it works offline.
 
 ## Built so far
 Open `index.html`. Tracks 1, 2, 3 and 9 are complete (22 lessons, each with a picture you can poke and four questions), plus the prompt sandbox, the roles family tree with its own zoom and quiz cards, review, streak, goal ring, light and dark, keyboard use and Save/Load. Tracks 4 to 8 are outlined on the Map and greyed. Checks live in `tests/run.js`.
